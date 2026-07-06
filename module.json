@@ -1,0 +1,31 @@
+{
+  "id": "hero-engine",
+  "title": "Hero Engine",
+  "description": "A plugin engine for bespoke epic character and weapon mechanics: trackers, charges, triggers, stances, transformations, curses and GM-adjudicated rituals — fully configurable, driven by a typed plugin API.",
+  "version": "0.1.0",
+  "authors": [{ "name": "pdc", "email": "pdc187@gmail.com" }],
+  "compatibility": {
+    "minimum": "13",
+    "verified": "14",
+    "maximum": "14"
+  },
+  "relationships": {
+    "systems": [
+      {
+        "id": "dnd5e",
+        "type": "system",
+        "compatibility": { "minimum": "4.0.0" }
+      }
+    ]
+  },
+  "esmodules": ["scripts/hero-engine.mjs"],
+  "styles": ["styles/hero-engine.css"],
+  "languages": [
+    { "lang": "en", "name": "English", "path": "lang/en.json" },
+    { "lang": "pt-BR", "name": "Português (Brasil)", "path": "lang/pt-BR.json" }
+  ],
+  "url": "https://github.com/pdc187/hero-engine",
+  "manifest": "https://github.com/pdc187/hero-engine/releases/latest/download/module.json",
+  "download": "https://github.com/pdc187/hero-engine/releases/latest/download/hero-engine.zip",
+  "socket": true
+}

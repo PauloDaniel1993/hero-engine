@@ -1,0 +1,128 @@
+/* Hero Engine */
+
+.hero-engine-panel {
+  border-top: 2px solid var(--color-border-light-primary, #7a7971);
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+}
+.hero-engine-panel h2 {
+  font-size: 1.1em;
+  border-bottom: 1px solid var(--color-border-light-tertiary, #b5b3a4);
+}
+.hero-engine-panel .he-mechanic {
+  margin-bottom: 0.75rem;
+  padding: 0.35rem;
+  border: 1px solid var(--color-border-light-tertiary, #b5b3a4);
+  border-radius: 4px;
+}
+.hero-engine-panel .he-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.15rem 0;
+}
+.hero-engine-panel .he-row label {
+  flex: 1;
+  font-weight: bold;
+}
+.hero-engine-panel .he-value {
+  min-width: 4rem;
+  text-align: right;
+}
+.hero-engine-panel .he-row button {
+  flex: 0 0 1.6rem;
+  line-height: 1.2;
+  padding: 0;
+}
+.hero-engine-panel .he-badge {
+  background: #7a1f1f;
+  color: #fff;
+  border-radius: 3px;
+  padding: 0 0.35rem;
+  font-size: 0.75em;
+}
+.hero-engine-panel .he-actions,
+.hero-engine-panel .he-triggers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-top: 0.35rem;
+}
+.hero-engine-panel .he-actions button,
+.hero-engine-panel .he-triggers button {
+  flex: 1 1 45%;
+  font-size: 0.85em;
+}
+.hero-engine-panel details.he-triggers summary {
+  flex-basis: 100%;
+  cursor: pointer;
+  font-size: 0.85em;
+  opacity: 0.8;
+}
+
+.hero-engine-card header {
+  border-bottom: 1px solid #999;
+  margin-bottom: 0.25rem;
+}
+.hero-engine-card .he-card-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-top: 0.35rem;
+}
+
+.hero-engine-gm h3 {
+  margin: 0.6rem 0 0.25rem;
+  border-bottom: 1px solid var(--color-border-light-tertiary, #b5b3a4);
+}
+.hero-engine-gm ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.hero-engine-gm li {
+  margin: 0.3rem 0;
+  padding: 0.3rem;
+  border: 1px solid var(--color-border-light-tertiary, #b5b3a4);
+  border-radius: 4px;
+}
+.hero-engine-gm .he-att-values,
+.hero-engine-gm .he-att-controls,
+.hero-engine-gm .he-adj-buttons,
+.hero-engine-gm .he-config-buttons,
+.hero-engine-gm .he-attach-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-top: 0.25rem;
+}
+.hero-engine-gm .he-hint,
+.hero-engine-config .he-hint {
+  font-size: 0.85em;
+  opacity: 0.75;
+}
+
+.hero-engine-config .he-field {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.3rem 0;
+}
+.hero-engine-config .he-field label {
+  flex: 0 0 40%;
+}
+.hero-engine-config .he-preview {
+  font-size: 0.85em;
+  opacity: 0.8;
+  min-width: 4rem;
+}
+.hero-engine-config .he-preview.he-invalid,
+.hero-engine-config .he-error {
+  color: #b02020;
+}
+.hero-engine-config .he-form-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.5rem;
+}

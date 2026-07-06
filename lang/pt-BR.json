@@ -1,0 +1,89 @@
+{
+  "HEROENGINE": {
+    "Settings": {
+      "DawnHour": {
+        "Name": "Hora do amanhecer",
+        "Hint": "Hora do tempo de jogo (0-23) em que recargas 'ao amanhecer' acontecem. Padrão 6."
+      }
+    },
+    "Socket": {
+      "WaitingForGM": "Nenhum Mestre conectado — o pedido foi enfileirado e será entregue quando um Mestre conectar.",
+      "QueueDrained": "{count} pedido(s) do Hero Engine entregue(s) ao Mestre."
+    },
+    "GMConfirm": { "Title": "Hero Engine — confirmação do Mestre" },
+    "Errors": {
+      "GMOnly": "Apenas o Mestre pode fazer isso.",
+      "NotOwner": "Você não é dono deste personagem.",
+      "Unavailable": "Esta ação não está disponível agora.",
+      "OnCooldown": "Em recarga ({remaining}).",
+      "NotEnough": "{resource} insuficiente.",
+      "AlreadyTransformed": "Já existe uma transformação ativa.",
+      "AlreadyAttached": "Esta mecânica já está vinculada.",
+      "FormActorMissing": "O ator de forma \"{name}\" não foi encontrado. Crie-o ou mude a forma para overlay."
+    },
+    "Chat": {
+      "ThresholdUp": "{tracker} chegou a {value}: {threshold}",
+      "TableResult": "{table}: rolou {roll} — {result}",
+      "ActionUsed": "usou {action}",
+      "SaveSuccess": "{prompt}: SUCESSO ({total} vs CD {dc})",
+      "SaveFailure": "{prompt}: FALHA ({total} vs CD {dc})",
+      "Recharged": "{resource} recarregado: {value}/{max}",
+      "TransformStart": "se transforma: {form} ({rounds} rodadas)",
+      "TransformEnd": "{form} termina.",
+      "StanceChanged": "{group}: {stance}",
+      "Adjudicated": "Decisão do Mestre — {title}: {result}"
+    },
+    "Cooldown": {
+      "longRest": "até um descanso longo",
+      "shortRest": "até um descanso curto",
+      "dawn": "até o amanhecer"
+    },
+    "Prompt": { "SaveVsDc": "Teste de resistência vs CD {dc} — escolha o atributo:" },
+    "Adjudication": {
+      "Queued": "Enviado ao Mestre para decisão.",
+      "Pending": "Hero Engine: {count} decisão(ões) pendente(s).",
+      "Confirmed": "confirmado",
+      "Denied": "negado"
+    },
+    "Attach": {
+      "Done": "Mecânica vinculada: {mechanic}",
+      "Rebound": "{mechanic} agora acompanha seu item com {actor}."
+    },
+    "Panel": {
+      "Title": "Mecânicas",
+      "Transform": "Forma ativa",
+      "RoundsLeft": "{rounds} rodada(s) restante(s)",
+      "ManualTriggers": "Gatilhos manuais"
+    },
+    "Stance": { "None": "— nenhuma —" },
+    "Config": {
+      "Save": "Salvar",
+      "Saved": "Configuração salva.",
+      "WorldTitle": "Configuração do mundo",
+      "OverrideTitle": "Ajustes por personagem",
+      "OverrideThis": "Sobrescrever este campo",
+      "Clear": "Limpar"
+    },
+    "GMPanel": {
+      "MenuName": "Painel do Mestre",
+      "MenuLabel": "Abrir painel",
+      "MenuHint": "Todas as mecânicas vinculadas: marcadores, recargas, transformações e decisões pendentes.",
+      "Title": "Hero Engine — Painel do Mestre",
+      "Adjudications": "Decisões pendentes",
+      "NoAdjudications": "Nada aguardando decisão.",
+      "Attach": "Vincular uma mecânica",
+      "AttachButton": "Vincular",
+      "Attachments": "Mecânicas vinculadas",
+      "None": "Nenhuma mecânica vinculada ainda.",
+      "NoItems": "Esse personagem não tem itens para vincular.",
+      "PickItem": "Vincular a qual item?",
+      "Detach": "Desvincular",
+      "EndTransform": "Encerrar transformação",
+      "Overrides": "Ajustes",
+      "WorldConfig": "Configuração do mundo",
+      "AdjustHint": "Clique para ajustar (digite ex.: \"-2 gasto no ritual\")",
+      "AdjustTitle": "Ajustar valor",
+      "AdjustLabel": "Delta e motivo para {id} (ex.: \"-2 gasto no ritual\"):"
+    }
+  }
+}

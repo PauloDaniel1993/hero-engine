@@ -1,0 +1,89 @@
+{
+  "HEROENGINE": {
+    "Settings": {
+      "DawnHour": {
+        "Name": "Dawn hour",
+        "Hint": "World-time hour (0-23) at which 'dawn' recharges fire. Default 6."
+      }
+    },
+    "Socket": {
+      "WaitingForGM": "No GM is connected — the request was queued and will be delivered when a GM connects.",
+      "QueueDrained": "{count} queued Hero Engine request(s) delivered to the GM."
+    },
+    "GMConfirm": { "Title": "Hero Engine — GM confirmation" },
+    "Errors": {
+      "GMOnly": "Only the GM can do that.",
+      "NotOwner": "You do not own this actor.",
+      "Unavailable": "This action is not available right now.",
+      "OnCooldown": "On cooldown ({remaining}).",
+      "NotEnough": "Not enough {resource}.",
+      "AlreadyTransformed": "A transformation is already active.",
+      "AlreadyAttached": "This mechanic is already attached.",
+      "FormActorMissing": "Form actor \"{name}\" was not found. Create it or switch the form to overlay strategy."
+    },
+    "Chat": {
+      "ThresholdUp": "{tracker} reached {value}: {threshold}",
+      "TableResult": "{table}: rolled {roll} — {result}",
+      "ActionUsed": "used {action}",
+      "SaveSuccess": "{prompt}: SUCCESS ({total} vs DC {dc})",
+      "SaveFailure": "{prompt}: FAILURE ({total} vs DC {dc})",
+      "Recharged": "{resource} recharged: {value}/{max}",
+      "TransformStart": "transforms: {form} ({rounds} rounds)",
+      "TransformEnd": "{form} ends.",
+      "StanceChanged": "{group}: {stance}",
+      "Adjudicated": "GM ruling — {title}: {result}"
+    },
+    "Cooldown": {
+      "longRest": "until a long rest",
+      "shortRest": "until a short rest",
+      "dawn": "until dawn"
+    },
+    "Prompt": { "SaveVsDc": "Save vs DC {dc} — choose the ability:" },
+    "Adjudication": {
+      "Queued": "Sent to the GM for a ruling.",
+      "Pending": "Hero Engine: {count} pending ruling(s).",
+      "Confirmed": "confirmed",
+      "Denied": "denied"
+    },
+    "Attach": {
+      "Done": "Mechanic attached: {mechanic}",
+      "Rebound": "{mechanic} now follows its item to {actor}."
+    },
+    "Panel": {
+      "Title": "Mechanics",
+      "Transform": "Active form",
+      "RoundsLeft": "{rounds} round(s) left",
+      "ManualTriggers": "Manual triggers"
+    },
+    "Stance": { "None": "— none —" },
+    "Config": {
+      "Save": "Save",
+      "Saved": "Configuration saved.",
+      "WorldTitle": "World configuration",
+      "OverrideTitle": "Per-actor overrides",
+      "OverrideThis": "Override this field",
+      "Clear": "Clear"
+    },
+    "GMPanel": {
+      "MenuName": "GM Control Panel",
+      "MenuLabel": "Open panel",
+      "MenuHint": "All attached mechanics: trackers, recharges, transformations and pending rulings.",
+      "Title": "Hero Engine — GM Control Panel",
+      "Adjudications": "Pending rulings",
+      "NoAdjudications": "Nothing awaiting a ruling.",
+      "Attach": "Attach a mechanic",
+      "AttachButton": "Attach",
+      "Attachments": "Attached mechanics",
+      "None": "No mechanics attached yet.",
+      "NoItems": "That actor has no items to bind.",
+      "PickItem": "Bind to which item?",
+      "Detach": "Detach",
+      "EndTransform": "End transformation",
+      "Overrides": "Overrides",
+      "WorldConfig": "World configuration",
+      "AdjustHint": "Click to adjust (enter e.g. \"-2 spent on ritual\")",
+      "AdjustTitle": "Adjust value",
+      "AdjustLabel": "Delta and reason for {id} (e.g. \"-2 spent on ritual\"):"
+    }
+  }
+}

@@ -1,0 +1,61 @@
+# Hero Engine
+
+A Foundry VTT module (v13/v14, dnd5e) that runs bespoke epic character and
+weapon mechanics as **plugins**: trackers, charge economies, triggered saves,
+stances, timed transformations, curses, consequence tables and GM-adjudicated
+rituals — all driven by a typed plugin API, with every value, DC formula,
+delay and recharge rule configurable from the UI.
+
+Ships with reference mechanics:
+
+- **Presa da Tempestade Vingativa** — sentient storm spear (item-bound):
+  Storm Charges, four stances, the Heroic Oath, the Storm's Weight curse.
+- **Deimos — O Limiar do Confessor** — the Book of Vile Darkness: Influence
+  Points, the Berserker, and the two-outcome Ultimate with its debts.
+- **Flaming Sword (example)** — the commented template for your own plugins.
+
+## Requirements
+
+- Foundry VTT v13 or v14
+- dnd5e system 4.0+
+- Node 20+ (build only)
+
+## Build & install
+
+```bash
+npm install
+npm run build     # bundle + statics into dist/ + publish types/ + API guard
+npm run deploy    # symlink/copy dist/ into <FoundryData>/Data/modules/hero-engine
+```
+
+`npm run deploy` asks for your Foundry data folder on first run and stores it
+in an untracked `.env`. Enable **Hero Engine** in your world afterwards.
+
+## Using it at the table
+
+1. **Attach**: Settings → Hero Engine → *GM Control Panel* → pick an actor and
+   a mechanic (item mechanics then ask which item to bind — e.g. bind Presa to
+   the Fang of the Vengeful Storm spear).
+2. **Play**: the actor's sheet gains a *Mechanics* panel (trackers, charges,
+   stances, actions, manual triggers). Crits, kills, rests and time advance
+   drive the automation; dialogs prompt saves at the right moments; outcomes
+   log to chat.
+3. **Adjudicate**: DM judgment calls (valid sacrifice? oath progress?) queue
+   in the GM panel.
+4. **Tune**: world defaults per mechanic in the GM panel's *World
+   configuration*; per-actor overrides via each attachment's *Overrides*
+   button. Formula fields accept things like `12 + @pi` with live preview.
+
+## Writing your own mechanics
+
+See **PLUGIN-GUIDE.md** and copy `src/plugins/example-flaming-sword/`.
+Typed contract: `types/types.d.ts`.
+
+## Development
+
+```bash
+npm test          # vitest — pure engine core (formulas, trackers, config, timing, validation)
+npm run check     # typecheck + plugin import guard
+```
+
+Verification in a live world: `docs/SMOKE-TEST.md`.
