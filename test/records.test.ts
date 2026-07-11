@@ -33,6 +33,7 @@ function fixture(capacity = 2) {
     config: () => undefined as never,
     state: {} as any,
     records: {} as any,
+    requestSecureTarget: async () => {},
     evalFormula: () => formulaCapacity,
     rollDice: async () => 0, openPrompt: async () => null, activateTransform: async () => {}, endTransform: async () => {},
     queueAdjudication: async () => {}, rollTable: async () => ({ roll: 1, textKey: "" }), postChat: async () => {},

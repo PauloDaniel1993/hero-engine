@@ -129,8 +129,8 @@ export function validatePlugin(plugin: MechanicPlugin): ValidationIssue[] {
           checkFormula(`${rp}.${k}`, v, true);
         }
       }
-      if (rule.fallbackAmount !== undefined && rule.conditionKey === undefined) {
-        err(`${rp}.fallbackAmount`, "requires `conditionKey`");
+      if (rule.fallbackAmount !== undefined && rule.conditionKey === undefined && rule.conditionFlag === undefined) {
+        err(`${rp}.fallbackAmount`, "requires `conditionKey` or `conditionFlag`");
       }
     });
   });

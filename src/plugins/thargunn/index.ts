@@ -53,12 +53,27 @@ async function chooseFeature(features: EligibleFeature[]): Promise<EligibleFeatu
   return features.find((feature) => feature.opaqueId === chosen) ?? null;
 }
 
-async function offerSiphon(ctx: MechanicContext, target: any, eventId: string, temporaryOverride?: boolean): Promise<void> {
+async function chooseCategory(): Promise<string | null> {
+  const DialogV2 = (globalThis as any).foundry?.applications?.api?.DialogV2;
+  if (!DialogV2) return "trait";
+  const result = await DialogV2.wait({
+    window: { title: game.i18n.localize(`${P}.Siphon.CategoryTitle`) }, content: `<p>${game.i18n.localize(`${P}.Siphon.CategoryHint`)}</p>`,
+    buttons: ECHO_CATEGORIES.map((category, index) => ({ action: category, label: game.i18n.localize(`${P}.Categories.${category}`), default: index === 0 })), rejectClose: false,
+  });
+  return typeof result === "string" ? result : null;
+}
+
+async function offerSiphon(ctx: MechanicContext, target: any, eventId: string, temporaryOverride?: boolean, chosenCategory?: string): Promise<void> {
   if (!game.user?.isGM) {
-    await ctx.queueAdjudication("secure-siphon", `event:${eventId}; target selected by owner; GM validation required`);
+    const category = chosenCategory ?? await chooseCategory();
+    if (!category) return;
+    await ctx.requestSecureTarget({ kind: "siphon", eventId, targetUuid: target.uuid, weaponUuid: weapon(ctx)?.uuid, category });
+    await ctx.postChat(`${P}.Siphon.SentToGm`);
     return;
   }
-  const feature = await chooseFeature(eligibleFeatures(target));
+  const available = eligibleFeatures(target);
+  const matching = chosenCategory ? available.filter((feature) => feature.category === chosenCategory) : available;
+  const feature = await chooseFeature(matching.length ? matching : available);
   if (!feature) {
     await ctx.postChat(`${P}.Siphon.NoFeature`);
     return;
@@ -215,6 +230,21 @@ async function runRite(ctx: MechanicContext): Promise<void> {
   }
 }
 
+async function addRecordedLegend(ctx: MechanicContext, name?: string, description = ""): Promise<void> {
+  let legendName = name;
+  if (!legendName) {
+    const DialogV2 = (globalThis as any).foundry?.applications?.api?.DialogV2;
+    legendName = DialogV2 ? await DialogV2.prompt({
+      window: { title: game.i18n.localize(`${P}.Legends.Add`) },
+      content: `<input type="text" name="legend" placeholder="${game.i18n.localize(`${P}.Legends.Name`)}" />`,
+      ok: { callback: (_event: unknown, button: any) => button.form?.elements?.legend?.value }, rejectClose: false,
+    }) : `Legend ${ctx.state.get("legends") + 1}`;
+  }
+  if (!legendName) return;
+  await ctx.records.create("recorded-legends", { name: legendName, description }, { lifecycle: { type: "permanent" } });
+  await ctx.state.set("legends", ctx.records.list("recorded-legends").slots.filter((slot) => slot.record).length);
+}
+
 async function createMarchField(ctx: MechanicContext): Promise<void> {
   const actor = actorOf(ctx);
   const existing = actor.effects?.find?.((effect: any) => effect.getFlag?.("hero-engine", "managed")?.key === "thargunn.effect.tenth-march-field");
@@ -249,6 +279,21 @@ const hooks = {
       await ctx.state.setFlag("fieldLocked", false);
       return;
     }
+    if (trigger.id === "short-rest") {
+      await ctx.state.setFlag("skeldrHungerGuardUsed", false);
+      return;
+    }
+    if (trigger.id === "field-expiry" && ctx.state.getFlag<boolean>("fieldActive")) {
+      const expires = Number(ctx.state.getFlag<number>("fieldExpires") ?? 0);
+      if (expires > 0 && Number(payload.data?.["worldTime"] ?? game.time?.worldTime ?? 0) >= expires) {
+        await ctx.state.setFlag("fieldActive", false);
+        const actor = actorOf(ctx);
+        const effect = actor.effects?.find?.((candidate: any) => candidate.getFlag?.("hero-engine", "managed")?.key === "thargunn.effect.tenth-march-field");
+        if (effect) await actor.deleteEmbeddedDocuments("ActiveEffect", [effect.id]);
+        await (globalThis as any).Sequencer?.EffectManager?.endEffects?.({ name: `hero-engine-field-${actor.id}` });
+      }
+      return;
+    }
     if (trigger.id === "turn-start" && ctx.state.transform()?.id === "tenth-march") {
       const turn = Number(ctx.state.getFlag<number>("ultimateTurns") ?? 0) + 1;
       await ctx.state.setFlag("ultimateTurns", turn);
@@ -268,6 +313,15 @@ const hooks = {
       const targetDoc = targetUuid ? await (globalThis as any).fromUuid?.(targetUuid) : null;
       const target = targetDoc?.actor ?? targetDoc;
       if (target) await offerSiphon(ctx, target, String(payload.data?.["eventId"] ?? foundry.utils.randomID()));
+      return;
+    }
+    if (trigger.id === "blood-hit") {
+      const item = weapon(ctx);
+      if (!item || payload.data?.["itemUuid"] !== item.uuid) return;
+      const targetDoc = payload.data?.["targetUuid"] ? await (globalThis as any).fromUuid?.(payload.data["targetUuid"]) : null;
+      const target = targetDoc?.actor ?? targetDoc;
+      const creatureType = String(target?.system?.details?.type?.value ?? "").toLowerCase();
+      if (target && !["undead", "construct"].includes(creatureType) && Number(target.system?.attributes?.hp?.max ?? 0) > 0) await ctx.state.setFlag("bloodSinceDawn", true);
       return;
     }
     if (trigger.id === "ultimate-hit" && ctx.state.transform()?.id === "tenth-march") {
@@ -338,6 +392,16 @@ const hooks = {
       if (Number(target.system?.attributes?.hp?.value ?? 1) <= 0) await target.update({ "system.attributes.hp.value": 1 });
       await ctx.state.adjust("fractures", 1);
     }
+    else if (action.id === "skeldr-hunger-guard") {
+      if (ctx.state.getFlag<boolean>("skeldrPresent") === false || ctx.state.getFlag<boolean>("skeldrHungerGuardUsed")) throw new Error(game.i18n.localize(`${P}.Skeldr.GuardUnavailable`));
+      await ctx.state.adjust("hungerTemporary", -1);
+      await ctx.state.setFlag("skeldrHungerGuardUsed", true);
+      await ctx.postChat(`${P}.Skeldr.Guarded`);
+    } else if (action.id === "skeldr-early-return") {
+      await ctx.state.setFlag("skeldrPresent", true);
+      await ctx.state.setFlag("skeldrReturnAt", 0);
+      await addRecordedLegend(ctx, game.i18n.localize(`${P}.Skeldr.EarlyLegend`), game.i18n.localize(`${P}.Skeldr.EarlyLegendHint`));
+    } else if (action.id === "record-legend") await addRecordedLegend(ctx);
     else if (action.id === "rite") await runRite(ctx);
     else if (action.id === "purify") await ctx.queueAdjudication("purification");
   },
@@ -362,6 +426,9 @@ const hooks = {
       if (slot) await ctx.records.block("echoes", slot.id, adjudication.id);
     }
   },
+  async onSecureTargetRequest(ctx: MechanicContext, request: any, target: any) {
+    if (request.kind === "siphon") await offerSiphon(ctx, target, request.eventId, undefined, request.category);
+  },
   async onTransformExpire(ctx: MechanicContext) { await finishUltimate(ctx); },
 };
 
@@ -377,7 +444,7 @@ export const thargunnMythic: MechanicPlugin = {
     { id: "fractures", labelKey: `${P}.Trackers.Fractures`, min: 0, max: 10, initial: 0 },
   ],
   resources: [
-    { id: "charges", labelKey: `${P}.Resources.Charges`, max: "5 + min(@weaponLevel - 1, 3) + max(0, @weaponLevel - 4)", initial: 5, recharge: [{ on: "dawn", amount: "full", conditionKey: `${P}.Recharge.BloodQuestion`, fallbackAmount: "none" }] },
+    { id: "charges", labelKey: `${P}.Resources.Charges`, max: "5 + min(@weaponLevel - 1, 3) + max(0, @weaponLevel - 4)", initial: 5, recharge: [{ on: "dawn", amount: "full", conditionFlag: "bloodSinceDawn", fallbackAmount: "none" }] },
     { id: "legendaryPoints", labelKey: `${P}.Resources.LegendaryPoints`, max: 3, initial: 0 },
   ],
   recordCollections: [
@@ -403,7 +470,10 @@ export const thargunnMythic: MechanicPlugin = {
   triggers: [
     { id: "siphon-normal", labelKey: `${P}.Siphon.Action`, event: "crit-dealt", runHook: true, manualFallback: false },
     { id: "siphon-kill", labelKey: `${P}.Siphon.Action`, event: "reduced-to-zero", runHook: true, manualFallback: false },
+    { id: "blood-hit", labelKey: `${P}.Recharge.BloodHit`, event: "attack-hit", runHook: true, manualFallback: false },
     { id: "long-rest", labelKey: `${P}.Triggers.LongRest`, event: "rest-long", runHook: true, manualFallback: false },
+    { id: "short-rest", labelKey: `${P}.Triggers.ShortRest`, event: "rest-short", runHook: true, manualFallback: false },
+    { id: "field-expiry", labelKey: `${P}.Field.Expiry`, event: "world-time-advanced", runHook: true, manualFallback: false },
     { id: "turn-start", labelKey: `${P}.Triggers.TurnStart`, event: "turn-start", runHook: true, manualFallback: false },
     { id: "turn-end", labelKey: `${P}.Triggers.TurnEnd`, event: "turn-end", runHook: true, manualFallback: false },
     { id: "ultimate-hit", labelKey: `${P}.Ultimate.ThunderousStep`, event: "attack-hit", runHook: true, manualFallback: false },
@@ -420,6 +490,9 @@ export const thargunnMythic: MechanicPlugin = {
     { id: "legendary-echo", labelKey: `${P}.Ultimate.LegendaryEcho`, costs: [{ resource: "legendaryPoints", amount: 2 }], requiresFlag: "ultimateActive", runHook: true },
     { id: "second-siphon", labelKey: `${P}.Ultimate.SecondSiphon`, costs: [{ resource: "legendaryPoints", amount: 3 }], requiresFlag: "ultimateActive", runHook: true },
     { id: "skeldr-rescue", labelKey: `${P}.Ultimate.SkeldrRescue`, costs: [{ resource: "legendaryPoints", amount: 3 }], requiresFlag: "ultimateActive", runHook: true },
+    { id: "skeldr-hunger-guard", labelKey: `${P}.Skeldr.GuardAction`, runHook: true },
+    { id: "skeldr-early-return", labelKey: `${P}.Skeldr.EarlyReturn`, gmOnly: true, runHook: true },
+    { id: "record-legend", labelKey: `${P}.Legends.Add`, gmOnly: true, runHook: true },
   ],
   transformations: [{ id: "tenth-march", labelKey: `${P}.Ultimate.Name`, strategy: "actor-swap", durationRounds: 5,
     swap: { formActorName: "Thar’gunn - Ultimate", hpCarry: "keep-percent" }, onExpire: { runHook: true, chatKey: `${P}.Ultimate.Ended` } }],

@@ -125,6 +125,14 @@ export interface RecordAccessor {
     cancelPending(collectionId: string, pendingId: string): Promise<void>;
     runAction(collectionId: string, recordId: string, actionId: string): Promise<void>;
 }
+export interface SecureTargetRequest {
+    kind: string;
+    eventId: string;
+    targetUuid: string;
+    weaponUuid?: string;
+    category?: string;
+    createdAt?: number;
+}
 /** Normalized events dispatched by the engine's trigger bus. */
 export type EngineEvent = "attack-hit" | "crit-dealt" | "crit-received" | "reduced-to-zero" | "damage-taken" | "ally-downed" | "rest-short" | "rest-long" | "turn-start" | "turn-end" | "combat-round" | "world-time-advanced";
 /** A step on a tracker's ladder (e.g. Peso da Tempestade 1–6, Marcas de Fome 3/5/7/10). */
@@ -155,6 +163,8 @@ export interface RechargeRule {
     setTo?: number;
     /** i18n key of a yes/no question the GM confirms before `amount` applies ("under open sky?"). */
     conditionKey?: string;
+    /** Resolve the condition from a persisted mechanic flag without a GM prompt. */
+    conditionFlag?: string;
     /** Applied instead when the GM answers "no" (e.g. `"2d8 + 4"`). */
     fallbackAmount?: RechargeAmount;
 }
@@ -405,6 +415,8 @@ export interface MechanicContext {
     config<T = unknown>(key: string): T;
     state: StateAccessor;
     records: RecordAccessor;
+    /** Submit an owner-authored request that an active GM revalidates using the server-attributed update user. */
+    requestSecureTarget(request: SecureTargetRequest): Promise<void>;
     /** Deterministic formula evaluation with mechanic variables + actor roll data. */
     evalFormula(formula: NumberOrFormula): number;
     /** Roll dice (chat-visible) and return the total. */
@@ -450,6 +462,7 @@ export interface PluginRuntimeHooks {
     onRecharge?(ctx: MechanicContext, resource: ResourceDef, rule: RechargeRule, applied: number): void | Promise<void>;
     onRecordAction?(ctx: MechanicContext, collection: RecordCollectionDef, record: MechanicRecord, action: RecordActionDef): void | Promise<void>;
     migrateRecord?(collectionId: string, record: MechanicRecord, fromVersion: number, toVersion: number): MechanicRecord;
+    onSecureTargetRequest?(ctx: MechanicContext, request: SecureTargetRequest, target: ActorDoc, trustedUserId: string): void | Promise<void>;
 }
 export interface MechanicPlugin {
     /** Unique kebab-case id, e.g. "presa-tempestade". */

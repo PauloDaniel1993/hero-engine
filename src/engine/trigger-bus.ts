@@ -53,6 +53,7 @@ function combatAllies(actor: any): any[] {
 export function initTriggerBus(): void {
   const compat = getCompat();
   const hpBeforeUpdate = new Map<string, number>();
+  const midiKills = new Set<string>();
 
   // --- Attack outcomes (fire on the rolling client) --------------------------
   compat.onAttackResult(async ({ attacker, target, isCrit, isHit, eventId, itemUuid, activityUuid }) => {
@@ -68,6 +69,25 @@ export function initTriggerBus(): void {
   compat.onRestCompleted(async ({ actor, kind, eventId }) => {
     await handleRest(actor, kind);
     await dispatchEvent(actor, kind, { eventId });
+  });
+
+  Hooks.on("midi-qol.RollComplete", async (workflow: any) => {
+    if (!isAuthoritativeClient()) return;
+    const attacker = workflow?.actor;
+    const item = workflow?.item;
+    if (!attacker || !item) return;
+    const eventId = String(workflow.uuid ?? workflow.id ?? workflow.itemCardId ?? foundry.utils.randomID());
+    for (const damage of workflow.damageList ?? []) {
+      const oldHp = Number(damage.oldHP ?? damage.oldHp ?? NaN);
+      const newHp = Number(damage.newHP ?? damage.newHp ?? NaN);
+      if (!Number.isFinite(oldHp) || !Number.isFinite(newHp) || oldHp <= 0 || newHp > 0) continue;
+      const target = damage.actor ?? game.actors?.get?.(damage.actorId) ?? damage.token?.actor;
+      const key = `${eventId}:${target?.uuid ?? damage.tokenId}`;
+      if (!target || midiKills.has(key)) continue;
+      midiKills.add(key);
+      if (midiKills.size > 200) midiKills.delete(midiKills.values().next().value!);
+      await dispatchEvent(attacker, "reduced-to-zero", { eventId, targetUuid: target.uuid, itemUuid: item.uuid, activityUuid: workflow.activity?.uuid });
+    }
   });
 
   // --- HP watching: damage-taken, ally-downed, reduced-to-zero ---------------

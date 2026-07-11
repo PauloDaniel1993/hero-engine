@@ -171,7 +171,7 @@
         "T10": "Fratura do nome verdadeiro"
       },
       "Debt": { "T3": "O Soberano fala", "T5": "Substituição da alma" },
-      "Recharge": { "BloodQuestion": "A arma provou sangue vivo desde o amanhecer anterior?" },
+      "Recharge": { "BloodQuestion": "A arma provou sangue vivo desde o amanhecer anterior?", "BloodHit": "Sangue vivo provado" },
       "Echo": {
         "Permanent": "Ecos Ocos permanentes",
         "PermanentHint": "Habilidades capturadas de criaturas que morreram antes do roubo expirar.",
@@ -198,11 +198,24 @@
         "Erasure5": "A arma recusa novo roubo até uma criatura poderosa ser morta.",
         "Erasure6": "Ganha uma Dívida de Essência."
       },
-      "Legends": { "Collection": "Lendas Gravadas nomeadas", "Name": "Nome da lenda", "Description": "O que tornou o feito mítico" },
+      "Legends": { "Collection": "Lendas Gravadas nomeadas", "Name": "Nome da lenda", "Description": "O que tornou o feito mítico", "Add": "Gravar uma Lenda nomeada" },
+      "Skeldr": {
+        "GuardAction": "Skeldr impede uma Fome",
+        "GuardUnavailable": "Skeldr está ausente ou já protegeu contra Fome neste descanso curto.",
+        "Guarded": "O trovão de Skeldr firma Thar’gunn e impede uma Fome.",
+        "EarlyReturn": "Retornar Skeldr por uma Lenda protetora",
+        "EarlyLegend": "O trovão respondeu cedo",
+        "EarlyLegendHint": "Um feito protetor chamou Skeldr antes do dia marcado.",
+        "Defeated": "Skeldr se desfaz em trovão e retornará em {days} dia(s).",
+        "Returned": "Skeldr retorna do trovão com força total."
+      },
       "Siphon": {
         "Action": "Sifão de Essência",
         "PickTitle": "Escolha o Eco Oco",
         "PickHint": "Selecione a característica cuja identidade a arma tentará roubar.",
+        "CategoryTitle": "Que tipo de identidade a arma deve buscar?",
+        "CategoryHint": "Escolha uma categoria redigida. O Mestre validará o alvo privado e a característica elegível.",
+        "SentToGm": "O pedido de Sifão foi enviado para validação autoritativa do Mestre.",
         "NoFeature": "Nenhuma característica suportada estava elegível para captura.",
         "Resisted": "{target} resiste ao Sifão ({total} contra CD {dc}).",
         "Captured": "{echo} é arrancado de {target} e se torna um Eco Oco.",
@@ -211,10 +224,17 @@
         "GmTitle": "Validar Sifão privado",
         "GmHint": "Revalide dono, alvo, arma, gatilho e característica sem revelar dados privados."
       },
+      "Categories": {
+        "trait": "Traço", "action": "Ação", "reaction": "Reação", "resistance": "Resistência", "sense": "Sentido",
+        "multiattack": "Multiataque", "recharge": "Recarga", "legendary-resistance": "Resistência Lendária",
+        "legendary-action": "Ação Lendária", "lair-action": "Ação de Covil", "spell": "Magia", "class-feature": "Característica de classe",
+        "divine": "Poder divino", "artifact": "Poder de artefato", "core": "Identidade central"
+      },
       "Field": {
         "Action": "Campo da Décima Marcha",
         "Unavailable": "O Campo exige ao menos uma carga e só retorna após descanso longo.",
-        "Activated": "O Campo consome {charges} cargas; uma marcha de 165 pés de terra roubada segue Thar’gunn."
+        "Activated": "O Campo consome {charges} cargas; uma marcha de 165 pés de terra roubada segue Thar’gunn.",
+        "Expiry": "Reconciliação da duração do Campo"
       },
       "Ultimate": {
         "Name": "A Marcha da Décima Lenda",
@@ -257,7 +277,7 @@
         "skeldr": "Retornar Skeldr",
         "fracture": "Reparar PV máximos de Fratura"
       },
-      "Triggers": { "LongRest": "Recuperação de descanso longo", "TurnStart": "Início do turno da Ultimate", "TurnEnd": "Fim do turno da Ultimate" },
+      "Triggers": { "LongRest": "Recuperação de descanso longo", "ShortRest": "Recuperação de descanso curto", "TurnStart": "Início do turno da Ultimate", "TurnEnd": "Fim do turno da Ultimate" },
       "Errors": { "NotEnoughCharges": "Cargas da Décima Vida insuficientes.", "SelectTarget": "Selecione uma criatura como alvo primeiro." },
       "Config": {
         "Siphon": "Sifão e Ecos",

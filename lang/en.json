@@ -171,7 +171,7 @@
         "T10": "True-name fracture"
       },
       "Debt": { "T3": "The Sovereign speaks", "T5": "Soul replacement" },
-      "Recharge": { "BloodQuestion": "Has the weapon tasted living blood since the previous dawn?" },
+      "Recharge": { "BloodQuestion": "Has the weapon tasted living blood since the previous dawn?", "BloodHit": "Living blood tasted" },
       "Echo": {
         "Permanent": "Permanent Hollow Echoes",
         "PermanentHint": "Abilities captured from creatures that died before the theft expired.",
@@ -198,11 +198,24 @@
         "Erasure5": "The weapon refuses another theft until a powerful creature is slain.",
         "Erasure6": "Gain one Essence Debt."
       },
-      "Legends": { "Collection": "Named Recorded Legends", "Name": "Legend name", "Description": "What made this deed mythic" },
+      "Legends": { "Collection": "Named Recorded Legends", "Name": "Legend name", "Description": "What made this deed mythic", "Add": "Record a named Legend" },
+      "Skeldr": {
+        "GuardAction": "Skeldr prevents one Hunger",
+        "GuardUnavailable": "Skeldr is absent or has already guarded Hunger this short rest.",
+        "Guarded": "Skeldr’s thunder steadies Thar’gunn and prevents one Hunger.",
+        "EarlyReturn": "Return Skeldr through a protective Legend",
+        "EarlyLegend": "The thunder answered early",
+        "EarlyLegendHint": "A protective deed called Skeldr back before the appointed day.",
+        "Defeated": "Skeldr dissolves into thunder and will return in {days} day(s).",
+        "Returned": "Skeldr returns from the thunder at full strength."
+      },
       "Siphon": {
         "Action": "Siphon Essence",
         "PickTitle": "Choose the Hollow Echo",
         "PickHint": "Select the feature whose identity the weapon will attempt to steal.",
+        "CategoryTitle": "What kind of identity should the weapon seek?",
+        "CategoryHint": "Choose a redacted category. The GM will validate the private target and eligible feature.",
+        "SentToGm": "The Siphon request was sent for authoritative GM validation.",
         "NoFeature": "No supported feature was eligible for capture.",
         "Resisted": "{target} resists the Siphon ({total} vs DC {dc}).",
         "Captured": "{echo} is torn from {target} and becomes a Hollow Echo.",
@@ -211,10 +224,17 @@
         "GmTitle": "Validate private Siphon",
         "GmHint": "Revalidate owner, target, weapon, trigger and eligible feature without disclosing private actor data."
       },
+      "Categories": {
+        "trait": "Trait", "action": "Action", "reaction": "Reaction", "resistance": "Resistance", "sense": "Sense",
+        "multiattack": "Multiattack", "recharge": "Recharge", "legendary-resistance": "Legendary Resistance",
+        "legendary-action": "Legendary Action", "lair-action": "Lair Action", "spell": "Spell", "class-feature": "Class feature",
+        "divine": "Divine power", "artifact": "Artifact power", "core": "Core identity"
+      },
       "Field": {
         "Action": "Field of the Tenth March",
         "Unavailable": "The Field needs at least one charge and cannot be used again before a long rest.",
-        "Activated": "The Field consumes {charges} charges; a 165-foot march of stolen earth follows Thar’gunn."
+        "Activated": "The Field consumes {charges} charges; a 165-foot march of stolen earth follows Thar’gunn.",
+        "Expiry": "Field duration reconciliation"
       },
       "Ultimate": {
         "Name": "The March of the Tenth Legend",
@@ -257,7 +277,7 @@
         "skeldr": "Return Skeldr",
         "fracture": "Repair Fracture max HP"
       },
-      "Triggers": { "LongRest": "Long-rest recovery", "TurnStart": "Ultimate turn start", "TurnEnd": "Ultimate turn end" },
+      "Triggers": { "LongRest": "Long-rest recovery", "ShortRest": "Short-rest recovery", "TurnStart": "Ultimate turn start", "TurnEnd": "Ultimate turn end" },
       "Errors": { "NotEnoughCharges": "Not enough Tenth Life charges.", "SelectTarget": "Target one creature first." },
       "Config": {
         "Siphon": "Siphon and Echoes",

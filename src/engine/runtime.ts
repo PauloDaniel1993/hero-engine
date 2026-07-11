@@ -235,6 +235,11 @@ export function makeContext(att: Attachment): MechanicContext | null {
       },
     },
     records: makeRecordAccessor(att, plugin, () => ctx),
+    requestSecureTarget: async (request) => {
+      await att.canonicalActor.setFlag("hero-engine", `secureRequests.${foundry.utils.randomID()}`, {
+        ...request, createdAt: Date.now(), pluginId: plugin.id,
+      });
+    },
     evalFormula: (formula) => {
       const s = state();
       if (!s) return 0;

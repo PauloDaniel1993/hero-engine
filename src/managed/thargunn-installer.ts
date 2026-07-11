@@ -203,3 +203,44 @@ export async function installThargunn(options: { baseActorId?: string; ultimateA
   report.dryRun = false;
   return report;
 }
+
+let hooksRegistered = false;
+export function initThargunnManagedHooks(): void {
+  if (hooksRegistered) return;
+  hooksRegistered = true;
+  Hooks.on("updateActor", async (actor: any, changes: any) => {
+    if (!game.user?.isGM) return;
+    if (keyOf(actor) === "thargunn.actor.skeldr") {
+      const hp = foundry.utils.getProperty(changes, "system.attributes.hp.value");
+      if (hp !== undefined && Number(hp) <= 0) {
+        const ownerUuid = actor.getFlag(MODULE_ID, "ownerActorUuid");
+        const base = ownerUuid ? await (globalThis as any).fromUuid?.(ownerUuid) : findActor("thargunn.actor.base");
+        const ctx = base ? contextFor(base, "thargunn-mythic") : null;
+        if (ctx && ctx.state.getFlag<boolean>("skeldrPresent") !== false) {
+          const roll = new Roll(String(ctx.config<string>("skeldrReturnDays") ?? "1d4"));
+          await roll.evaluate();
+          await ctx.state.setFlag("skeldrPresent", false);
+          await ctx.state.setFlag("skeldrReturnAt", Number(game.time?.worldTime ?? 0) + Number(roll.total ?? 1) * 86400);
+          await ctx.postChat("HEROENGINE.Thargunn.Skeldr.Defeated", { days: roll.total ?? 1 });
+        }
+      }
+      return;
+    }
+    if (keyOf(actor) === "thargunn.actor.base" && (foundry.utils.hasProperty(changes, "system.details.level") || foundry.utils.hasProperty(changes, "system.attributes.prof"))) {
+      await reconcileSkeldr(actor);
+    }
+  });
+  Hooks.on("updateWorldTime", async (worldTime: number) => {
+    if (!game.user?.isGM) return;
+    const base = findActor("thargunn.actor.base");
+    const ctx = base ? contextFor(base, "thargunn-mythic") : null;
+    const returnAt = Number(ctx?.state.getFlag<number>("skeldrReturnAt") ?? 0);
+    if (ctx && ctx.state.getFlag<boolean>("skeldrPresent") === false && returnAt > 0 && worldTime >= returnAt) {
+      await ctx.state.setFlag("skeldrPresent", true);
+      await ctx.state.setFlag("skeldrReturnAt", 0);
+      const skeldr = findActor("thargunn.actor.skeldr");
+      if (skeldr) await skeldr.update({ "system.attributes.hp.value": skeldr.system?.attributes?.hp?.max ?? 1 });
+      await ctx.postChat("HEROENGINE.Thargunn.Skeldr.Returned");
+    }
+  });
+}

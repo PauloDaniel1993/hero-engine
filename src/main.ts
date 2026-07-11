@@ -9,6 +9,8 @@ import { ensureAttachmentReady } from "./engine/records";
 import { makeContext } from "./engine/runtime";
 import { isTransformedActor, resolveAttachments } from "./engine/state";
 import { initSuppressionGuard } from "./engine/suppression";
+import { initThargunnManagedHooks } from "./managed/thargunn-installer";
+import { initSecureTargetRequests } from "./engine/secure-targets";
 import { applyTheme, registerCoreSettings } from "./engine/settings";
 import { initSockets, registerGmConfirmResponder } from "./engine/sockets";
 import { initTriggerBus } from "./engine/trigger-bus";
@@ -50,6 +52,8 @@ Hooks.once("ready", async () => {
   registerChatCardListeners();
   registerSheetPanel();
   initSuppressionGuard();
+  initThargunnManagedHooks();
+  initSecureTargetRequests();
   applyTheme();
   for (const actor of game.actors ?? []) {
     if (isTransformedActor(actor)) continue;

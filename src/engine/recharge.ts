@@ -24,7 +24,13 @@ async function applyRule(
   if (!state) return;
 
   let amount = rule.amount;
-  if (rule.conditionKey) {
+  let consumedConditionFlag = false;
+  if (rule.conditionFlag) {
+    const confirmed = state.flags[rule.conditionFlag] === true;
+    consumedConditionFlag = true;
+    state.flags[rule.conditionFlag] = false;
+    if (!confirmed) amount = rule.fallbackAmount ?? "none";
+  } else if (rule.conditionKey) {
     const confirmed = await requestGmConfirm(
       `${(att.actor as any).name}: ${localize(rule.conditionKey)}`
     );
@@ -44,7 +50,10 @@ async function applyRule(
     next = prev + (await rollSilent(amount, data));
   }
   next = Math.min(Math.max(next, 0), max);
-  if (next === prev) return;
+  if (next === prev) {
+    if (consumedConditionFlag) await writeState(att.stateDoc, plugin.id, state);
+    return;
+  }
 
   state.values[resource.id] = next;
   appendAudit(state, `${resource.id}: ${prev} -> ${next} (recharge:${rule.on})`);
