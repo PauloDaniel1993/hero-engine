@@ -303,12 +303,16 @@ function renderMechanic(att: Attachment, plugin: MechanicPlugin, state: Instance
     .filter((a) => !a.gmOnly || game.user.isGM)
     .map((a) => {
       const cd = cooldownStatus(att, plugin, a);
+      const meetsFlags = (!a.requiresFlag || Boolean(state.flags[a.requiresFlag]))
+        && (!a.forbidsFlag || !state.flags[a.forbidsFlag]);
       const costText = (a.costs ?? [])
         .map((c) => `${safeNum(c.amount, data)} ${escapeHtml(localize(plugin.resources?.find((r) => r.id === c.resource)?.labelKey ?? c.resource))}`)
         .join(", ");
-      const disabled = !editable || !cd.ready ? "disabled" : "";
+      const disabled = !editable || !cd.ready || !meetsFlags ? "disabled" : "";
       const cdText = cd.ready ? "" : ` (${escapeHtml(cd.remainingText ?? "")})`;
-      const title = a.descriptionKey ? ` title="${escapeHtml(localize(a.descriptionKey))}"` : "";
+      const titleText = !meetsFlags ? localize("HEROENGINE.Errors.Unavailable")
+        : a.descriptionKey ? localize(a.descriptionKey) : "";
+      const title = titleText ? ` title="${escapeHtml(titleText)}"` : "";
       return `<button type="button" data-he="action" data-plugin="${plugin.id}" data-id="${a.id}" ${disabled}${title}>
         ${escapeHtml(localize(a.labelKey))}${costText ? ` [${costText}]` : ""}${cdText}</button>`;
     })

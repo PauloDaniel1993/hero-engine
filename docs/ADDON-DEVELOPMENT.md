@@ -206,6 +206,13 @@ Actions with a cost or irreversible effect SHOULD use a declared prompt. The
 engine resolves the prompt before applying the cost. A dismissed dialog MUST
 make no state or document change.
 
+An action that only submits a deferred GM ruling SHOULD set
+`announceUse: false`; the generic "used action" card would otherwise claim the
+effect happened before approval. Such an action MUST also defer its cooldown,
+cost, and irreversible mutations until `onAdjudicated` confirms the ruling.
+Use a persisted pending flag to prevent duplicate submissions and clear it on
+both confirmation and denial.
+
 Hooks MUST:
 
 - await every dialog, roll, chat message, document mutation, and context call;
@@ -401,6 +408,12 @@ targets and privileged mutations.
   documents or GM-only metadata merely to build a picker.
 - Use `ctx.requestSecureTarget(...)` for owner-authored requests involving a
   target whose authoritative data must be resolved by a GM.
+- dnd5e actor swaps and other GM-only document mutations requested by a player
+  MUST be executed from a `runHook` adjudication on the active GM client. Store
+  only JSON-safe request context on the canonical actor, re-check prerequisites
+  during `onAdjudicated`, and apply cooldowns or consumption only after the
+  privileged mutation succeeds. A denied ruling MUST leave those resources
+  untouched.
 - Mark record actions `ownerOnly` or `gmOnly` where appropriate and enforce the
   same permission in any alternate UI path.
 - Make socket and chat-card operations idempotent. Assume retries, reconnects,

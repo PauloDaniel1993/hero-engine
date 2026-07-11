@@ -439,7 +439,9 @@ async function executeActionInternal(att: Attachment, actionId: string): Promise
       if (ctx) await plugin.hooks?.onActionUse?.(ctx, action, promptResult);
     }
     await markCooldown(att, plugin, action);
-    await postChat(att.actor, "HEROENGINE.Chat.ActionUsed", { action: localize(action.labelKey) });
+    if (action.announceUse !== false) {
+      await postChat(att.actor, "HEROENGINE.Chat.ActionUsed", { action: localize(action.labelKey) });
+    }
   } catch (error) {
     appendAudit(rollbackState, `action ${action.id} rolled back after failure`);
     await writeState(att.stateDoc, plugin.id, rollbackState);

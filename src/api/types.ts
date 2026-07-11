@@ -296,6 +296,12 @@ export interface ActionDef {
   /** ConsequenceTableDef id rolled when the action resolves. */
   table?: string;
   runHook?: boolean;
+  /**
+   * Post the engine's generic "used {action}" chat card after resolution.
+   * Defaults to true. Deferred workflows that only submit a GM ruling should
+   * disable this and post their completion message when the ruling resolves.
+   */
+  announceUse?: boolean;
 }
 
 export interface StanceDef {

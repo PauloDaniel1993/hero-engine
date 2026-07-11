@@ -37,13 +37,16 @@ export async function resolveAdjudication(entryId: string, resultId: string): Pr
     if (ops?.length) await applyOpsTo(att, plugin, ops, `adjudication:${def.id}`);
   }
 
-  await postChat(actor, "HEROENGINE.Chat.Adjudicated", {
-    title: localize(def.titleKey),
-    result: label,
-  });
   if (def.runHook) {
     const ctx = makeContext(att);
     if (ctx) await plugin.hooks?.onAdjudicated?.(ctx, def, resultId);
   }
+  // A ruling is only announced as resolved after its imperative hook has
+  // finished. This is important for privileged operations such as actor swap:
+  // "confirmed" must mean the GM-side document mutation actually completed.
+  await postChat(actor, "HEROENGINE.Chat.Adjudicated", {
+    title: localize(def.titleKey),
+    result: label,
+  });
   Hooks.callAll("heroEngine.adjudicationResolved", entry, resultId);
 }

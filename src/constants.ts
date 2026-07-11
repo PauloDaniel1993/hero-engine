@@ -1,5 +1,5 @@
 export const MODULE_ID = "hero-engine";
-export const API_VERSION = "2.1.0";
+export const API_VERSION = "2.2.0";
 export const SOCKET_NAME = `module.${MODULE_ID}`;
 
 /** Settings keys (world scope). */
