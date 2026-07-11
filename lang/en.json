@@ -159,6 +159,8 @@
       ,"PendingHint": "All usable slots are full. Choose the Echo to erase, or cancel this capture."
       ,"Replace": "Erase and replace"
       ,"Cancel": "Cancel capture"
+      ,"MissingLink": "Repair needed"
+      ,"MissingLinkHint": "The linked dnd5e activity is missing. Using this record rebuilds it from authoritative record data."
     },
     "Thargunn": {
       "Name": "Thar’gunn — The Tenth Life",

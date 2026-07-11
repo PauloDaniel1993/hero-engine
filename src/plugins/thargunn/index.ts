@@ -181,6 +181,7 @@ async function useEcho(ctx: MechanicContext, collection: RecordCollectionDef, re
   const cost = Number(record.data["cost"] ?? 1);
   if (ctx.state.get("charges") < cost) throw new Error(game.i18n.localize(`${P}.Errors.NotEnoughCharges`));
   const actor = actorOf(ctx);
+  await createEchoItem(ctx, collection.id, record);
   const managedFeature = actor.items?.find((item: any) => item.getFlag?.("hero-engine", MANAGED_FLAG)?.recordId === record.id);
   const activity = managedFeature ? Object.values(managedFeature.system?.activities ?? {})[0] as any : null;
   if (activity?.use && activity.getFlag?.("hero-engine", "managed") !== true && activity.flags?.["hero-engine"]?.managed !== true) {

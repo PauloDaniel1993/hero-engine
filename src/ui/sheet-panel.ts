@@ -186,6 +186,7 @@ function renderMechanic(att: Attachment, plugin: MechanicPlugin, state: Instance
     const rows = allSlots.map((slot, index) => {
       const overflow = index >= snapshot.slots.length;
       const status = slot.blocked ? "blocked" : slot.record ? (slot.record.temporary ? "temporary" : "permanent") : "empty";
+      const missingLink = !!slot.record && ["echoes", "temporary-echoes"].includes(collection.id) && !att.canonicalActor.items?.some?.((item: any) => item.getFlag?.("hero-engine", "managed")?.recordId === slot.record!.id);
       const title = slot.record ? String(slot.record.data["name"] ?? slot.record.data["label"] ?? slot.record.id) : localize("HEROENGINE.Records.Empty");
       const details = slot.record ? Object.entries(slot.record.data).filter(([key]) => !["name", "label", "sourceOpaqueId", "sourceActorUuid"].includes(key)).map(([key, value]) => {
         const field = collection.fields.find((candidate) => candidate.key === key);
@@ -195,8 +196,8 @@ function renderMechanic(att: Attachment, plugin: MechanicPlugin, state: Instance
       const actions = slot.record ? (collection.actions ?? []).filter((action) => !action.gmOnly || game.user.isGM).map((action) => `<button type="button" data-he="record-action" data-plugin="${plugin.id}" data-collection="${collection.id}" data-record="${slot.record!.id}" data-action="${action.id}">${escapeHtml(localize(action.labelKey))}</button>`).join("") : "";
       return `<article class="he-record-slot is-${status}${overflow ? " is-overflow" : ""}" data-he-record data-status="${status}" data-search="${escapeHtml(`${title} ${JSON.stringify(slot.record?.data ?? {})}`.toLocaleLowerCase())}">
         <header><span class="he-record-index">${index + 1}</span><strong>${escapeHtml(title)}</strong>
-          <span class="he-record-badges">${overflow ? `<i>${localize("HEROENGINE.Records.Overflow")}</i>` : ""}<i>${localize(`HEROENGINE.Records.${status[0]!.toUpperCase()}${status.slice(1)}`)}</i></span></header>
-        ${slot.blocked ? `<p>${escapeHtml(slot.blocked.reason)}</p>` : ""}${details ? `<div class="he-record-details">${details}</div>` : ""}
+          <span class="he-record-badges">${overflow ? `<i>${localize("HEROENGINE.Records.Overflow")}</i>` : ""}${missingLink ? `<i class="is-warning">${localize("HEROENGINE.Records.MissingLink")}</i>` : ""}<i>${localize(`HEROENGINE.Records.${status[0]!.toUpperCase()}${status.slice(1)}`)}</i></span></header>
+        ${slot.blocked ? `<p>${escapeHtml(slot.blocked.reason)}</p>` : ""}${missingLink ? `<p class="he-record-link-warning">${escapeHtml(localize("HEROENGINE.Records.MissingLinkHint"))}</p>` : ""}${details ? `<div class="he-record-details">${details}</div>` : ""}
         ${actions ? `<footer>${actions}</footer>` : ""}</article>`;
     }).join("");
     const eraseOptions = allSlots.filter((slot) => slot.record && !slot.blocked).map((slot) => `<option value="${slot.record!.id}">${escapeHtml(String(slot.record!.data["name"] ?? slot.record!.id))}</option>`).join("");

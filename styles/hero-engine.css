@@ -1416,6 +1416,8 @@ html[data-hero-engine-theme="storm"] #scene-controls [data-tool="hero-engine-gm"
 .hero-engine-panel .he-record-index { display: grid; width: 1.35rem; height: 1.35rem; place-items: center; border-radius: 50%; color: #e8ad4b; background: rgba(224,155,47,.12); font-size: .58rem; }
 .hero-engine-panel .he-record-badges { display: flex; gap: .25rem; }
 .hero-engine-panel .he-record-badges i { padding: .16rem .3rem; border: 1px solid rgba(231,166,55,.2); border-radius: 999px; color: #deb06a; font-size: .52rem; font-style: normal; text-transform: uppercase; }
+.hero-engine-panel .he-record-badges i.is-warning { border-color: rgba(231,93,67,.4); color: #f29a80; background: rgba(139,48,31,.18); }
+.hero-engine-panel .he-record-link-warning { margin: .4rem 0 0; color: #ed9a80; font-size: .58rem; }
 .hero-engine-panel .he-record-details { display: flex; flex-wrap: wrap; gap: .3rem .55rem; margin-top: .4rem; color: rgba(255,255,255,.6); font-size: .58rem; }
 .hero-engine-panel .he-record-details span { display: flex; gap: .25rem; }
 .hero-engine-panel .he-record-details b { color: rgba(255,255,255,.8); }

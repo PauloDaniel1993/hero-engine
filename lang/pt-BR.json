@@ -159,6 +159,8 @@
       ,"PendingHint": "Todos os espaços utilizáveis estão cheios. Escolha o Eco a apagar ou cancele esta captura."
       ,"Replace": "Apagar e substituir"
       ,"Cancel": "Cancelar captura"
+      ,"MissingLink": "Reparo necessário"
+      ,"MissingLinkHint": "A atividade dnd5e vinculada está ausente. Usar este registro a reconstrói a partir dos dados autoritativos."
     },
     "Thargunn": {
       "Name": "Thar’gunn — A Décima Vida",
