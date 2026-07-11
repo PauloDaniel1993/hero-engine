@@ -382,8 +382,8 @@ export async function reconcileEchoProjections(ctx: MechanicContext): Promise<vo
   }
 }
 
-async function reconcilePenaltyEffects(ctx: MechanicContext): Promise<void> {
-  const actor = actorOf(ctx);
+async function reconcilePenaltyEffects(ctx: MechanicContext, targetActor?: any): Promise<void> {
+  const actor = targetActor ?? actorOf(ctx);
   const families = [
     { key: "thargunn.effect.essence-debt", name: "Dívida de Essência", value: -10 * ctx.state.get("essenceDebt") },
     { key: "thargunn.effect.name-fracture", name: "Fratura de Nome", value: -Number(ctx.state.getFlag<number>("fractureMaxHpPenalty") ?? 0) },
@@ -580,16 +580,19 @@ export async function recoverPendingUltimateApproval(ctx: MechanicContext): Prom
 }
 
 async function finishUltimate(ctx: MechanicContext): Promise<void> {
+  // dnd5e deletes the temporary polymorph Actor before onTransformExpire runs.
+  // Consequences and persistent effects therefore belong on canonical Thar’gunn.
+  const actor = (ctx.canonicalActor ?? ctx.actor) as any;
   const fractures = ctx.state.get("fractures");
   const damage = await ctx.rollDice(ultimateExpiryDamage(fractures), `${P}.Ultimate.ExpiryDamage`);
-  await actorOf(ctx).applyDamage?.(damage, { ignore: true });
+  await actor.applyDamage?.(damage, { ignore: true });
   for (const consequence of fractureConsequences(fractures)) {
     if (consequence === "max-hp-10") await ctx.state.setFlag("fractureMaxHpPenalty", 10);
     if (consequence === "skeldr-absent") await ctx.state.setFlag("skeldrPresent", false);
     if (consequence === "block-echo-slot") await ctx.queueAdjudication("fracture-block-slot");
     if (consequence === "identity-ruling") await ctx.queueAdjudication("fracture-identity");
   }
-  await reconcilePenaltyEffects(ctx);
+  await reconcilePenaltyEffects(ctx, actor);
   await ctx.state.set("legendaryPoints", 0);
   await ctx.state.setFlag("ultimateActive", false);
   await ctx.state.setFlag("ultimateTakeoverLocked", false);

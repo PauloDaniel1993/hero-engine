@@ -203,6 +203,36 @@ describe("Thar’gunn eligible feature extraction", () => {
     expect(values).toMatchObject({ fractures: 0, legendaryPoints: 0 });
   });
 
+  it("applies de-transformation consequences to canonical Thar’gunn", async () => {
+    const runtime = { applyDamage: vi.fn(), effects: [], system: { attributes: { hp: { value: 100, max: 100 } } } };
+    const canonical = { applyDamage: vi.fn(), effects: [], system: { attributes: { hp: { value: 80, max: 100 } } } };
+    const flags: Record<string, unknown> = { ultimateActive: true, ultimateTakeoverLocked: true, usurpedFirstEchoPending: true };
+    const values: Record<string, number> = { fractures: 0, legendaryPoints: 3 };
+    (globalThis as any).game = {
+      actors: { find: () => null },
+      i18n: { localize: (key: string) => key },
+    };
+    const ctx: any = {
+      actor: runtime,
+      canonicalActor: canonical,
+      state: {
+        get: (key: string) => values[key] ?? 0,
+        set: vi.fn(async (key: string, value: number) => { values[key] = value; }),
+        getFlag: (key: string) => flags[key],
+        setFlag: vi.fn(async (key: string, value: unknown) => { flags[key] = value; }),
+      },
+      rollDice: vi.fn(async () => 17),
+      queueAdjudication: vi.fn(),
+    };
+
+    await thargunnMythic.hooks?.onTransformExpire?.(ctx, thargunnMythic.transformations![0]!);
+
+    expect(canonical.applyDamage).toHaveBeenCalledWith(17, { ignore: true });
+    expect(runtime.applyDamage).not.toHaveBeenCalled();
+    expect(values.legendaryPoints).toBe(0);
+    expect(flags).toMatchObject({ ultimateActive: false, ultimateTakeoverLocked: false, usurpedFirstEchoPending: false });
+  });
+
   it("repairs Echo Items on canonical Thar’gunn and removes Ultimate-form copies", async () => {
     const record: any = {
       id: "echo-record-1", schemaVersion: 1, createdAt: 1, createdBy: "gm", temporary: true,
