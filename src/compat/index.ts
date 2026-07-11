@@ -9,6 +9,7 @@ import { createApp } from "../ui/app-base";
 export interface RestEvent {
   actor: any;
   kind: "rest-short" | "rest-long";
+  eventId: string;
 }
 
 export interface AttackResultEvent {
@@ -16,6 +17,9 @@ export interface AttackResultEvent {
   target: any | null;
   isCrit: boolean;
   isHit: boolean;
+  eventId: string;
+  itemUuid?: string;
+  activityUuid?: string;
 }
 
 export interface Compat {
@@ -44,8 +48,8 @@ export interface Compat {
   /** Inject a rendered block into an actor sheet; returns true when injected. */
   injectIntoActorSheet(app: any, root: HTMLElement, panelHtml: string): boolean;
   /** dnd5e polymorph-style transform / revert. */
-  transformInto(actor: any, formActor: any, options: { keepHpPercent: boolean }): Promise<void>;
-  revertOriginalForm(actor: any): Promise<void>;
+  transformInto(actor: any, formActor: any, options: { keepHpPercent: boolean }): Promise<any>;
+  revertOriginalForm(actor: any, options?: { keepHpPercent?: boolean }): Promise<any>;
 }
 
 function escapeHtml(value: unknown): string {
@@ -215,15 +219,26 @@ async function rollSave(actor: any, ability: string): Promise<{ total: number; n
 }
 
 function onRestCompleted(cb: (ev: RestEvent) => void): void {
+  const seen = new Map<string, number>();
+  const deliver = (actor: any, kind: RestEvent["kind"], source: any) => {
+    const eventId = String(source?.id ?? source?._id ?? `${actor?.uuid}:${kind}:${Math.floor(Date.now() / 750)}`);
+    const key = `${actor?.uuid}:${kind}:${eventId}`;
+    const now = Date.now();
+    if ((seen.get(key) ?? 0) > now - 5_000) return;
+    seen.set(key, now);
+    for (const [id, at] of seen) if (at < now - 30_000) seen.delete(id);
+    cb({ actor, kind, eventId });
+  };
   // dnd5e 4/5: dnd5e.restCompleted(actor, result). Older split hooks kept as fallback.
   Hooks.on("dnd5e.restCompleted", (actor: any, result: any) => {
-    cb({ actor, kind: result?.longRest ? "rest-long" : "rest-short" });
+    deliver(actor, result?.longRest ? "rest-long" : "rest-short", result);
   });
-  Hooks.on("dnd5e.longRest", (actor: any) => cb({ actor, kind: "rest-long" }));
-  Hooks.on("dnd5e.shortRest", (actor: any) => cb({ actor, kind: "rest-short" }));
+  Hooks.on("dnd5e.longRest", (actor: any, result: any) => deliver(actor, "rest-long", result));
+  Hooks.on("dnd5e.shortRest", (actor: any, result: any) => deliver(actor, "rest-short", result));
 }
 
 function onAttackResult(cb: (ev: AttackResultEvent) => void): void {
+  const seen = new Map<string, number>();
   const handle = (rolls: any, data: any) => {
     const roll = Array.isArray(rolls) ? rolls[0] : rolls;
     if (!roll) return;
@@ -233,11 +248,20 @@ function onAttackResult(cb: (ev: AttackResultEvent) => void): void {
     const target =
       [...(game.user?.targets ?? [])][0]?.actor ?? data?.target?.actor ?? null;
     const isCrit = roll.isCritical === true;
+    const item = data?.subject?.item ?? data?.item ?? data?.activity?.item;
+    const activity = data?.subject?.activity ?? data?.activity;
+    const natural = roll.dice?.find((die: any) => die.faces === 20)?.total ?? 0;
+    const eventId = String(roll.id ?? roll._id ?? data?.message?.id ?? `${attacker.uuid}:${item?.uuid ?? activity?.uuid ?? "attack"}:${roll.total}:${natural}:${Math.floor(Date.now() / 500)}`);
+    const key = `${attacker.uuid}:${eventId}`;
+    const now = Date.now();
+    if ((seen.get(key) ?? 0) > now - 5_000) return;
+    seen.set(key, now);
+    for (const [id, at] of seen) if (at < now - 30_000) seen.delete(id);
     // Hit detection: compare vs first target's AC when available; otherwise assume hit.
     let isHit = true;
     const ac = target?.system?.attributes?.ac?.value;
     if (typeof ac === "number" && typeof roll.total === "number") isHit = roll.total >= ac || isCrit;
-    cb({ attacker, target, isCrit, isHit });
+    cb({ attacker, target, isCrit, isHit, eventId, itemUuid: item?.uuid, activityUuid: activity?.uuid });
   };
   // dnd5e 4.x+ activities pipeline:
   Hooks.on("dnd5e.rollAttackV2", (rolls: any, data: any) => handle(rolls, data));
@@ -279,41 +303,54 @@ function injectIntoActorSheet(_app: any, root: HTMLElement, panelHtml: string): 
   return true;
 }
 
-async function transformInto(actor: any, formActor: any, options: { keepHpPercent: boolean }): Promise<void> {
-  const settings = {
-    keepPhysical: false,
-    keepMental: false,
-    keepSaves: false,
-    keepSkills: false,
-    mergeSaves: false,
-    mergeSkills: false,
-    keepClass: false,
-    keepFeats: false,
-    keepSpells: false,
-    keepItems: false,
-    keepBio: true,
-    keepVision: true,
-    transformTokens: true,
-  };
-  if (typeof actor.transformInto === "function") {
-    await actor.transformInto(formActor, settings);
-    if (options.keepHpPercent) {
-      const pct = actor.system?.attributes?.hp
-        ? actor.system.attributes.hp.value / Math.max(1, actor.system.attributes.hp.max)
-        : 1;
-      const transformed = game.actors?.get(actor.id) ?? actor;
-      const max = transformed.system?.attributes?.hp?.max ?? 0;
-      await transformed.update({ "system.attributes.hp.value": Math.max(1, Math.floor(max * pct)) });
-    }
-  } else {
+async function transformInto(actor: any, formActor: any, options: { keepHpPercent: boolean }): Promise<any> {
+  if (typeof actor.transformInto !== "function") {
     throw new Error("hero-engine: dnd5e transformInto API unavailable; use overlay strategy");
   }
+  const hp = actor.system?.attributes?.hp;
+  const hpPct = hp ? hp.value / Math.max(1, hp.max) : 1;
+  const before = new Set((game.actors ?? []).map((candidate: any) => candidate.id));
+  const Setting = (globalThis as any).dnd5e?.dataModels?.settings?.TransformationSetting;
+  if (!Setting) throw new Error("hero-engine: dnd5e TransformationSetting API unavailable");
+  const settings = new Setting({
+    keep: ["bio", "vision"],
+    effects: ["all"],
+    merge: [],
+    spellLists: [],
+    transformTokens: true,
+  });
+  const updatedTokens = await actor.transformInto(formActor, settings, { renderSheet: false });
+  let transformed = Array.isArray(updatedTokens)
+    ? updatedTokens.map((token: any) => token?.actor ?? game.actors?.get(token?.actorId)).find(Boolean)
+    : updatedTokens?.actor;
+  transformed ??= [...(game.actors ?? [])]
+    .filter((candidate: any) => !before.has(candidate.id) && candidate.getFlag?.("dnd5e", "originalActor") === actor.id)
+    .at(-1);
+  transformed ??= [...(game.actors ?? [])]
+    .filter((candidate: any) => candidate.getFlag?.("dnd5e", "originalActor") === actor.id)
+    .at(-1);
+  if (!transformed) throw new Error("hero-engine: dnd5e created no resolvable transformed actor");
+  if (options.keepHpPercent) {
+    const max = transformed.system?.attributes?.hp?.max ?? 0;
+    await transformed.update({ "system.attributes.hp.value": Math.max(1, Math.floor(max * hpPct)) });
+  }
+  return transformed;
 }
 
-async function revertOriginalForm(actor: any): Promise<void> {
+async function revertOriginalForm(actor: any, options: { keepHpPercent?: boolean } = {}): Promise<any> {
   if (typeof actor.revertOriginalForm === "function") {
-    await actor.revertOriginalForm();
+    const hp = actor.system?.attributes?.hp;
+    const hpPct = hp ? hp.value / Math.max(1, hp.max) : 1;
+    const originalId = actor.getFlag?.("dnd5e", "originalActor");
+    const original = await actor.revertOriginalForm({ renderSheet: false });
+    const resolved = original ?? game.actors?.get(originalId);
+    if (resolved && options.keepHpPercent) {
+      const max = resolved.system?.attributes?.hp?.max ?? 0;
+      await resolved.update({ "system.attributes.hp.value": Math.max(1, Math.floor(max * hpPct)) });
+    }
+    return resolved;
   }
+  return null;
 }
 
 let cached: Compat | null = null;

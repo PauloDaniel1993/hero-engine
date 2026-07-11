@@ -13,7 +13,7 @@ import { forceRecharge, resetCooldown } from "../engine/recharge";
 import { getPlugin, listPlugins } from "../engine/registry";
 import { applyOpsTo, makeContext } from "../engine/runtime";
 import { getAdjudicationQueue } from "../engine/settings";
-import { readState, resolveAttachments, type Attachment } from "../engine/state";
+import { isTransformedActor, readState, resolveAttachments, type Attachment } from "../engine/state";
 import { endTransform } from "../engine/transforms";
 import { createApp } from "./app-base";
 import { escapeHtml } from "./chat-cards";
@@ -71,7 +71,10 @@ function makeMenuShim(): any {
 
 function worldAttachments(): Attachment[] {
   const out: Attachment[] = [];
-  for (const actor of game.actors ?? []) out.push(...resolveAttachments(actor));
+  for (const actor of game.actors ?? []) {
+    if (isTransformedActor(actor)) continue;
+    out.push(...resolveAttachments(actor));
+  }
   return out;
 }
 

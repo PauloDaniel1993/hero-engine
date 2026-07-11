@@ -38,6 +38,7 @@ export async function activateTransform(
   const strategy = resolveStrategy(ctx, def);
   const rounds = Math.max(1, Math.round(ctx.evalFormula(def.durationRounds)));
   const actor: any = att.actor;
+  const activationId = foundry.utils.randomID();
 
   if (strategy === "overlay") {
     const effectIds: string[] = [];
@@ -63,7 +64,7 @@ export async function activateTransform(
       );
       itemIds.push(...created.map((d: any) => d.id));
     }
-    state.transform = { id: def.id, strategy, roundsLeft: rounds, effectIds, itemIds };
+    state.transform = { id: def.id, strategy, roundsLeft: rounds, effectIds, itemIds, activationId, canonicalActorUuid: att.canonicalActor.uuid };
   } else {
     const formName = def.swap?.formActorName ?? "";
     const formActor = game.actors?.getName?.(formName);
@@ -71,10 +72,30 @@ export async function activateTransform(
       ui.notifications?.error(localize("HEROENGINE.Errors.FormActorMissing", { name: formName }));
       return;
     }
-    await getCompat().transformInto(actor, formActor, {
-      keepHpPercent: def.swap?.hpCarry === "keep-percent",
-    });
-    state.transform = { id: def.id, strategy, roundsLeft: rounds };
+    const hp = actor.system?.attributes?.hp;
+    state.transform = {
+      id: def.id,
+      strategy,
+      roundsLeft: rounds,
+      activationId,
+      canonicalActorUuid: att.canonicalActor.uuid,
+      hpCarry: def.swap?.hpCarry ?? "form-max",
+      originalHpPct: hp ? hp.value / Math.max(1, hp.max) : 1,
+    };
+    appendAudit(state, `transform ${def.id} preparing (${strategy}, ${rounds} rounds)`);
+    // Persist before dnd5e clones the actor so the clone cannot inherit stale inactive flags.
+    await writeState(att.stateDoc, plugin.id, state);
+    try {
+      const runtimeActor = await getCompat().transformInto(actor, formActor, {
+        keepHpPercent: def.swap?.hpCarry === "keep-percent",
+      });
+      state.transform.runtimeActorUuid = runtimeActor?.uuid;
+    } catch (error) {
+      state.transform = null;
+      appendAudit(state, `transform ${def.id} activation failed`);
+      await writeState(att.stateDoc, plugin.id, state);
+      throw error;
+    }
   }
 
   appendAudit(state, `transform ${def.id} activated (${strategy}, ${rounds} rounds)`);
@@ -108,7 +129,10 @@ export async function endTransform(
   const active = state?.transform;
   if (!state || !active) return;
   const def = plugin.transformations?.find((t) => t.id === active.id);
-  const actor: any = att.actor;
+  const runtimeUuid = active.runtimeActorUuid;
+  const actor: any = runtimeUuid
+    ? ((globalThis as any).fromUuidSync?.(runtimeUuid) ?? game.actors?.get(runtimeUuid.split(".").at(-1)))
+    : att.actor;
 
   if (active.strategy === "overlay") {
     if (active.effectIds?.length) {
@@ -120,7 +144,7 @@ export async function endTransform(
       if (existing.length) await actor.deleteEmbeddedDocuments("Item", existing);
     }
   } else {
-    await getCompat().revertOriginalForm(actor);
+    await getCompat().revertOriginalForm(actor, { keepHpPercent: active.hpCarry === "keep-percent" });
   }
 
   state.transform = null;

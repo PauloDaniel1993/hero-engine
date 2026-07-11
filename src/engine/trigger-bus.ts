@@ -51,29 +51,36 @@ function combatAllies(actor: any): any[] {
 
 export function initTriggerBus(): void {
   const compat = getCompat();
+  const hpBeforeUpdate = new Map<string, number>();
 
   // --- Attack outcomes (fire on the rolling client) --------------------------
-  compat.onAttackResult(async ({ attacker, target, isCrit, isHit }) => {
-    if (isHit) await dispatchEvent(attacker, "attack-hit", { targetUuid: target?.uuid });
+  compat.onAttackResult(async ({ attacker, target, isCrit, isHit, eventId, itemUuid, activityUuid }) => {
+    const attackData = { targetUuid: target?.uuid, eventId, itemUuid, activityUuid };
+    if (isHit) await dispatchEvent(attacker, "attack-hit", attackData);
     if (isCrit) {
-      await dispatchEvent(attacker, "crit-dealt", { targetUuid: target?.uuid });
-      if (target) await dispatchEvent(target, "crit-received", { attackerUuid: attacker?.uuid });
+      await dispatchEvent(attacker, "crit-dealt", attackData);
+      if (target) await dispatchEvent(target, "crit-received", { attackerUuid: attacker?.uuid, eventId, itemUuid, activityUuid });
     }
   });
 
   // --- Rests (fire on the initiating client) --------------------------------
-  compat.onRestCompleted(async ({ actor, kind }) => {
+  compat.onRestCompleted(async ({ actor, kind, eventId }) => {
     await handleRest(actor, kind);
-    await dispatchEvent(actor, kind);
+    await dispatchEvent(actor, kind, { eventId });
   });
 
   // --- HP watching: damage-taken, ally-downed, reduced-to-zero ---------------
+  Hooks.on("preUpdateActor", (actor: any, changes: any) => {
+    if (foundry.utils.getProperty(changes, "system.attributes.hp.value") === undefined) return;
+    const current = actor.system?.attributes?.hp?.value;
+    if (typeof current === "number") hpBeforeUpdate.set(actor.uuid, current);
+  });
   Hooks.on("updateActor", async (actor: any, changes: any, _options: any, _userId: string) => {
     if (!isAuthoritativeClient()) return;
     const newHp = foundry.utils.getProperty(changes, "system.attributes.hp.value");
     if (newHp === undefined) return;
-    const prevHp = actor._heroEnginePrevHp ?? actor.system?.attributes?.hp?.value;
-    actor._heroEnginePrevHp = newHp;
+    const prevHp = hpBeforeUpdate.get(actor.uuid);
+    hpBeforeUpdate.delete(actor.uuid);
 
     if (typeof prevHp === "number" && newHp < prevHp) {
       await dispatchEvent(actor, "damage-taken", { amount: prevHp - newHp });
@@ -83,13 +90,7 @@ export function initTriggerBus(): void {
       for (const ally of combatAllies(actor)) {
         await dispatchEvent(ally, "ally-downed", { downedUuid: actor.uuid, downedName: actor.name });
       }
-      // Credit the current combatant with reduced-to-zero when it's an enemy drop.
-      const current = game.combat?.combatant?.actor;
-      const currentDisp = game.combat?.combatant?.token?.disposition;
-      const downedDisp = game.combat?.combatants?.find((c: any) => c.actor?.id === actor.id)?.token?.disposition;
-      if (current && current.id !== actor.id && currentDisp !== undefined && currentDisp !== downedDisp) {
-        await dispatchEvent(current, "reduced-to-zero", { targetUuid: actor.uuid });
-      }
+      // Kill credit needs a correlated damage workflow; never infer it from the current combatant.
     }
   });
 

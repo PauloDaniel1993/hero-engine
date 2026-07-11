@@ -23,6 +23,12 @@ export interface TransformState {
   /** Overlay bookkeeping for full revert. */
   effectIds?: string[];
   itemIds?: string[];
+  /** Runtime actor created by dnd5e actor-swap. State remains on canonicalActorUuid. */
+  runtimeActorUuid?: string;
+  canonicalActorUuid?: string;
+  activationId?: string;
+  hpCarry?: "keep-percent" | "form-max";
+  originalHpPct?: number;
 }
 
 export interface InstanceState {
@@ -37,10 +43,31 @@ export interface InstanceState {
 
 export interface Attachment {
   actor: any;
+  /** Stable non-polymorphed actor which owns character state and attachment pointers. */
+  canonicalActor: any;
   /** The document holding state: bound item for item archetype, else the actor. */
   stateDoc: any;
   item?: any;
   pluginId: string;
+}
+
+/** Resolve dnd5e polymorph clones back to the stable world actor. */
+export function canonicalActor(actor: any): any {
+  let current = actor;
+  const seen = new Set<string>();
+  while (current) {
+    const id = current.getFlag?.("dnd5e", "originalActor") ?? current.flags?.dnd5e?.originalActor;
+    if (!id || seen.has(String(id))) break;
+    seen.add(String(id));
+    const next = game.actors?.get?.(id) ?? (globalThis as any).fromUuidSync?.(id);
+    if (!next || next === current) break;
+    current = next;
+  }
+  return current ?? actor;
+}
+
+export function isTransformedActor(actor: any): boolean {
+  return canonicalActor(actor) !== actor || actor.getFlag?.("dnd5e", "isPolymorphed") === true;
 }
 
 function emptyState(): InstanceState {
@@ -120,14 +147,15 @@ export async function setActorAttachment(
 
 /** Resolve all live attachments for an actor (item pointers resolved). */
 export function resolveAttachments(actor: any): Attachment[] {
+  const canonical = canonicalActor(actor);
   const out: Attachment[] = [];
-  for (const [pluginId, info] of Object.entries(actorAttachments(actor))) {
+  for (const [pluginId, info] of Object.entries(actorAttachments(canonical))) {
     if (info.itemUuid) {
-      const item = actor.items?.find((i: any) => i.uuid === info.itemUuid || i.getFlag?.(MODULE_ID, "boundPlugin") === pluginId);
-      if (item) out.push({ actor, stateDoc: item, item, pluginId });
+      const item = canonical.items?.find((i: any) => i.uuid === info.itemUuid || i.getFlag?.(MODULE_ID, "boundPlugin") === pluginId);
+      if (item) out.push({ actor, canonicalActor: canonical, stateDoc: item, item, pluginId });
       // Item gone (weapon handed off): attachment is dormant on this actor.
     } else {
-      out.push({ actor, stateDoc: actor, pluginId });
+      out.push({ actor, canonicalActor: canonical, stateDoc: canonical, pluginId });
     }
   }
   return out;
