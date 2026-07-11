@@ -1,6 +1,6 @@
 import { MODULE_ID, SETTINGS } from "../constants";
 import { attachMechanic } from "../engine/attach";
-import { contextFor } from "../engine/runtime";
+import { contextFor, executeAction } from "../engine/runtime";
 import { resolveAttachment } from "../engine/state";
 import { skeldrStats } from "../plugins/thargunn/rules";
 
@@ -14,8 +14,16 @@ export interface ManagedMetadata { key: string; contentVersion: number; template
 export interface InstallChange { kind: "Actor" | "Item" | "Macro" | "Attachment" | "Collision"; key: string; action: "create" | "update" | "adopt" | "noop" | "report"; documentUuid?: string; details: string[]; }
 export interface InstallReport { dryRun: boolean; baseActorId?: string; ultimateActorId?: string; changes: InstallChange[]; warnings: string[]; }
 
+function stableSerialize(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stableSerialize).join(",")}]`;
+  if (value && typeof value === "object") {
+    return `{${Object.entries(value as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b)).map(([key, entry]) => `${JSON.stringify(key)}:${stableSerialize(entry)}`).join(",")}}`;
+  }
+  return JSON.stringify(value) ?? "null";
+}
+
 function stableHash(value: unknown): string {
-  const text = JSON.stringify(value, Object.keys(value as any ?? {}).sort());
+  const text = stableSerialize(value);
   let hash = 2166136261;
   for (let i = 0; i < text.length; i += 1) { hash ^= text.charCodeAt(i); hash = Math.imul(hash, 16777619); }
   return (hash >>> 0).toString(16).padStart(8, "0");
@@ -31,10 +39,10 @@ function findItem(actor: any, key: string): any | null { return actor.items?.fin
 function findMacro(key: string): any | null { return game.macros?.find((macro: any) => keyOf(macro) === key) ?? null; }
 
 const featureTemplates = [
-  ["thargunn.item.siphon", "Sifão de Essência", "Attempt to steal one eligible feature and store it as a Hollow Echo."],
-  ["thargunn.item.field", "Campo da Décima Marcha", "Spend every remaining charge to create the moving 165-foot mythic field."],
-  ["thargunn.item.ultimate", "A Marcha da Décima Lenda", "Enter the native level-20 Ultimate form for five of Thar’gunn’s turns."],
-  ["thargunn.item.rite", "Rito da Décima Lenda", "Resolve the three DC 25 checks that can break the Sovereign’s bond."],
+  ["thargunn.item.siphon", "Sifão de Essência", "Attempt to steal one eligible feature and store it as a Hollow Echo.", "siphon-manual"],
+  ["thargunn.item.field", "Campo da Décima Marcha", "Spend every remaining charge to create the moving 165-foot mythic field.", "field"],
+  ["thargunn.item.ultimate", "A Marcha da Décima Lenda", "Enter the native level-20 Ultimate form for five of Thar’gunn’s turns.", "ultimate"],
+  ["thargunn.item.rite", "Rito da Décima Lenda", "Resolve the three DC 25 checks that can break the Sovereign’s bond.", "rite"],
 ] as const;
 
 const macroTemplates = [
@@ -77,9 +85,10 @@ async function setManaged(doc: any, key: string, source: unknown, extra: Partial
 }
 
 function clonedActivities(source: any): Record<string, unknown> {
-  const activities = foundry.utils.deepClone(source.system?.activities ?? {});
-  const base = foundry.utils.deepClone(Object.values(activities)[0] ?? null) as any;
-  if (!base) return activities;
+  const current = foundry.utils.deepClone(source.system?.activities ?? {});
+  const base = foundry.utils.deepClone(Object.values(current)[0] ?? null) as any;
+  if (!base) return current;
+  const activities: Record<string, unknown> = {};
   const forms = [
     ["TgHalberdAtk0001", "Forma de Alabarda"],
     ["TgGreatAxeAtk001", "Forma de Machado Grande"],
@@ -105,14 +114,28 @@ async function reconcileWeapon(base: any): Promise<any | null> {
   return source;
 }
 
-async function reconcileFeature(actor: any, [key, name, description]: typeof featureTemplates[number]): Promise<any> {
+function utilityActivity(id: string, name: string): Record<string, unknown> {
+  return {
+    _id: id, type: "utility", name, sort: 0,
+    activation: { type: "action", value: 1, condition: "", override: true },
+    consumption: { targets: [], scaling: { allowed: false, max: "" }, spellSlot: false },
+    duration: { value: "", units: "inst", special: "", concentration: false, override: true },
+    range: { units: "self", special: "", override: true },
+    target: { prompt: false, affects: { type: "self", choice: false }, template: { contiguous: false, units: "ft", stationary: false }, override: true },
+    uses: { spent: 0, recovery: [] }, visibility: { level: {}, requireAttunement: false, requireIdentification: false, requireMagic: false },
+    roll: { prompt: false, visible: false }, effects: [], flags: { [MODULE_ID]: { managed: true } },
+  };
+}
+
+async function reconcileFeature(actor: any, [key, name, description, actionId]: typeof featureTemplates[number]): Promise<any> {
   const current = findItem(actor, key);
+  const activityId = `Tg${stableHash(key).slice(0, 14)}`;
   const data = {
     name, type: "feat", img: "modules/hero-engine/assets/thargunn/icons/echo-trait.webp",
-    system: { description: { value: `<p>${description}</p>` }, identifier: key.replaceAll(".", "-") },
-    flags: { [MODULE_ID]: { managed: metadata(key, { name, description }) } },
+    system: { description: { value: `<p>${description}</p>` }, identifier: key.replaceAll(".", "-"), activities: { [activityId]: utilityActivity(activityId, name) } },
+    flags: { [MODULE_ID]: { managed: metadata(key, { name, description, actionId }), actionId } },
   };
-  if (current) { await current.update({ name: data.name, img: data.img, "system.description.value": data.system.description.value, [`flags.${MODULE_ID}.managed`]: data.flags[MODULE_ID].managed }); return current; }
+  if (current) { await current.update({ name: data.name, img: data.img, "system.description.value": data.system.description.value, "system.activities": data.system.activities, [`flags.${MODULE_ID}.managed`]: data.flags[MODULE_ID].managed, [`flags.${MODULE_ID}.actionId`]: actionId }); return current; }
   return (await actor.createEmbeddedDocuments("Item", [data]))[0];
 }
 
@@ -143,12 +166,16 @@ async function reconcileSkeldr(base: any): Promise<any> {
   const skeldrFeatures = [
     ["thargunn.skeldr.horn", "Chifres da Marcha", `Melee attack +${stats.attack}; ${stats.damageDice} piercing plus thunder.`],
     ["thargunn.skeldr.charge", "Carga Trovejante", `Trample and Strength save DC ${stats.saveDc}; prone on failure.`],
+    ["thargunn.skeldr.earthshaking", "Pisada Estremecedora", `Earthshaking control; Strength save DC ${stats.saveDc}.`],
     ["thargunn.skeldr.guard", "Guardião do Passo Justo", "Protective reaction and once-per-short-rest Hunger prevention."],
   ] as const;
   for (const [key, name, description] of skeldrFeatures) {
     const current = findItem(skeldr, key);
-    const data = { name, type: "feat", img: "modules/hero-engine/assets/thargunn/skeldr-token.webp", system: { description: { value: `<p>${description}</p>` }, identifier: key.replaceAll(".", "-") }, flags: { [MODULE_ID]: { managed: metadata(key, { name, description }) } } };
-    if (current) await current.update({ name, "system.description.value": data.system.description.value, [`flags.${MODULE_ID}.managed`]: data.flags[MODULE_ID].managed });
+    const activityId = `Tg${stableHash(key).slice(0, 14)}`;
+    const activity = utilityActivity(activityId, name) as any;
+    if (key.endsWith(".guard")) activity.activation.type = "reaction";
+    const data = { name, type: "feat", img: "modules/hero-engine/assets/thargunn/skeldr-token.webp", system: { description: { value: `<p>${description}</p>` }, identifier: key.replaceAll(".", "-"), activities: { [activityId]: activity } }, flags: { [MODULE_ID]: { managed: metadata(key, { name, description }) } } };
+    if (current) await current.update({ name, "system.description.value": data.system.description.value, "system.activities": data.system.activities, [`flags.${MODULE_ID}.managed`]: data.flags[MODULE_ID].managed });
     else await skeldr.createEmbeddedDocuments("Item", [data]);
   }
   return skeldr;
@@ -162,10 +189,10 @@ async function reconcileUltimate(ultimate: any): Promise<void> {
     [`flags.${MODULE_ID}.chassis`]: { provider: "hero-engine-native", version: 1, provisionalStrike: true },
   });
   const features = [
-    ["thargunn.ultimate.legendary-points", "Pontos Lendários", "Three points refresh at the start of each Thar’gunn turn and expire at the next."],
-    ["thargunn.ultimate.thunderous-step", "Passo Trovejante de Skeldr", "After 20 feet of Skeldr movement, the next weapon hit gains 8d12 thunder and 8d12 force."],
-    ["thargunn.ultimate.siphon", "Sifão da Décima Vida", "Once each turn, attempt Siphon on any weapon hit; a second use costs three Legendary Points."],
-    ["thargunn.ultimate.devastating-strike", "Golpe Devastador (provisório)", "Costs two Legendary Points; defaults to 4d12 force plus 4d12 thunder."],
+    ["thargunn.ultimate.legendary-points", "Pontos Lendários", "Three points refresh at the start of each Thar’gunn turn and expire at the next.", "mighty-impel"],
+    ["thargunn.ultimate.thunderous-step", "Passo Trovejante de Skeldr", "After 20 feet of Skeldr movement, the next weapon hit gains 8d12 thunder and 8d12 force.", "skeldr-move"],
+    ["thargunn.ultimate.siphon", "Sifão da Décima Vida", "Once each turn, attempt Siphon on any weapon hit; a second use costs three Legendary Points.", "second-siphon"],
+    ["thargunn.ultimate.devastating-strike", "Golpe Devastador (provisório)", "Costs two Legendary Points; defaults to 4d12 force plus 4d12 thunder.", "devastating-strike"],
   ] as const;
   for (const feature of features) await reconcileFeature(ultimate, feature as any);
 }
@@ -208,6 +235,14 @@ let hooksRegistered = false;
 export function initThargunnManagedHooks(): void {
   if (hooksRegistered) return;
   hooksRegistered = true;
+  Hooks.on("dnd5e.useActivity", async (activity: any) => {
+    const item = activity?.item;
+    const actor = item?.actor;
+    const actionId = item?.getFlag?.(MODULE_ID, "actionId");
+    if (!actor || !actionId || !actor.testUserPermission?.(game.user, "OWNER")) return;
+    const attachment = resolveAttachment(actor, "thargunn-mythic");
+    if (attachment) await executeAction(attachment, actionId);
+  });
   Hooks.on("updateActor", async (actor: any, changes: any) => {
     if (!game.user?.isGM) return;
     if (keyOf(actor) === "thargunn.actor.skeldr") {
