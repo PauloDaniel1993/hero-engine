@@ -87,7 +87,7 @@ async function setManaged(doc: any, key: string, source: unknown, extra: Partial
 }
 
 function clonedActivities(source: any): Record<string, unknown> {
-  const current = foundry.utils.deepClone(source.system?.activities ?? {});
+  const current = foundry.utils.deepClone(source.toObject?.().system?.activities ?? source.system?.activities ?? {});
   const base = foundry.utils.deepClone(Object.values(current)[0] ?? null) as any;
   if (!base) return current;
   const activities: Record<string, unknown> = {};
@@ -105,13 +105,17 @@ async function reconcileWeapon(base: any, ultimate = false): Promise<any | null>
   const source = managed ?? base.items?.get?.(SOURCE_WEAPON_ID) ?? base.items?.find((item: any) => item.name === "Nine Lives Stealer Halberd");
   if (!source) return null;
   const description = `<h2>Ladrão da Décima Vida</h2><p>Arma mítica senciente que rouba aquilo que torna uma criatura única. Requer sintonização.</p><p>As formas de alabarda, machado grande e arremesso gigantesco compartilham a mesma arma e o mesmo estado.</p>`;
+  const activities = clonedActivities(source);
+  for (const id of Object.keys(source.toObject?.().system?.activities ?? {})) {
+    if (!(id in activities)) activities[`-=${id}`] = null;
+  }
   await source.update({
     name: "Ladrão da Décima Vida",
     img: "modules/hero-engine/assets/thargunn/tenth-life-thief.webp",
     "system.identifier": "ladrao-da-decima-vida",
     "system.description.value": description,
     ...(ultimate ? { "system.range.value": 20, "system.range.units": "ft" } : {}),
-    "system.activities": clonedActivities(source),
+    "system.activities": activities,
     [`flags.${MODULE_ID}.managed`]: metadata("thargunn.item.weapon", { description, activities: 3 }),
   });
   return source;
@@ -130,9 +134,13 @@ function utilityActivity(id: string, name: string): Record<string, unknown> {
   };
 }
 
+export function managedActivityId(key: string): string {
+  return `Tg${stableHash(key)}${stableHash(`${key}:activity`).slice(0, 6)}`;
+}
+
 async function reconcileFeature(actor: any, [key, name, description, actionId]: typeof featureTemplates[number]): Promise<any> {
   const current = findItem(actor, key);
-  const activityId = `Tg${stableHash(key).slice(0, 14)}`;
+  const activityId = managedActivityId(key);
   const data = {
     name, type: "feat", img: "modules/hero-engine/assets/thargunn/icons/echo-trait.webp",
     system: { description: { value: `<p>${description}</p>` }, identifier: key.replaceAll(".", "-"), activities: { [activityId]: utilityActivity(activityId, name) } },
@@ -164,6 +172,7 @@ async function reconcileSkeldr(base: any): Promise<any> {
     "prototypeToken.width": 3, "prototypeToken.height": 3, "prototypeToken.texture.src": "modules/hero-engine/assets/thargunn/skeldr-token.webp",
     "system.attributes.hp.max": stats.hp, "system.attributes.hp.value": Math.max(1, Math.floor(stats.hp * pct)),
     "system.attributes.ac.calc": "natural", "system.attributes.ac.flat": stats.ac,
+    "system.traits.size": "huge",
     [`flags.${MODULE_ID}.managed`]: metadata("thargunn.actor.skeldr", stats), [`flags.${MODULE_ID}.ownerActorUuid`]: base.uuid,
   });
   const skeldrFeatures = [
@@ -174,7 +183,7 @@ async function reconcileSkeldr(base: any): Promise<any> {
   ] as const;
   for (const [key, name, description] of skeldrFeatures) {
     const current = findItem(skeldr, key);
-    const activityId = `Tg${stableHash(key).slice(0, 14)}`;
+    const activityId = managedActivityId(key);
     const activity = utilityActivity(activityId, name) as any;
     if (key.endsWith(".guard")) activity.activation.type = "reaction";
     const data = { name, type: "feat", img: "modules/hero-engine/assets/thargunn/skeldr-token.webp", system: { description: { value: `<p>${description}</p>` }, identifier: key.replaceAll(".", "-"), activities: { [activityId]: activity } }, flags: { [MODULE_ID]: { managed: metadata(key, { name, description }) } } };

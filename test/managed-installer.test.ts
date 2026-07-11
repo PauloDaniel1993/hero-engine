@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { previewThargunnInstall } from "../src/managed/thargunn-installer";
+import { managedActivityId, previewThargunnInstall } from "../src/managed/thargunn-installer";
 
 function collection<T extends { id: string; name?: string }>(entries: T[]) {
   const value: any = entries;
@@ -40,5 +40,13 @@ describe("managed Thar’gunn installer preview", () => {
     const report = await previewThargunnInstall();
     expect(report.warnings.join(" ")).toMatch(/source item is missing/i);
     expect(report.dryRun).toBe(true);
+  });
+
+  it("generates deterministic Foundry-compatible managed activity IDs", () => {
+    const first = managedActivityId("thargunn.feature.field");
+    expect(first).toHaveLength(16);
+    expect(first).toMatch(/^[A-Za-z0-9]+$/);
+    expect(managedActivityId("thargunn.feature.field")).toBe(first);
+    expect(managedActivityId("thargunn.feature.siphon")).not.toBe(first);
   });
 });
