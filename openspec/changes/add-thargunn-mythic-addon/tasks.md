@@ -1,11 +1,11 @@
 ## 1. Baseline inventory and rollback evidence
 
-- [ ] 1.1 Record the repository commit, Node/npm versions, Foundry build, dnd5e version, active integration versions, and current Hero Engine manifest/version/compatibility metadata.
-- [ ] 1.2 Hash and inventory every file in the installed Hero Engine directory and classify repository-versus-installed differences as intentional, generated, or stale.
-- [ ] 1.3 Capture T3 browser screenshots and a behavior checklist for the current GM scene-control launcher, GM panel, actor/item search, category filters, Save/Cancel dialogs, actor-sheet button, mechanics popout, and persistent manual-trigger section.
-- [ ] 1.4 Export JSON backups of `Thar’gunn` and `Thar’gunn - Ultimate`, including ownership, prototype tokens, items, effects, and flags.
-- [ ] 1.5 Create and verify a Foundry world backup plus a timestamped copy of the installed Hero Engine module outside its deployment path.
-- [ ] 1.6 Document exact actor IDs, item counts, duplicate subclass candidates, managed weapon source item, current ownership, and the absence of Skeldr and Thar’gunn mechanic state.
+- [x] 1.1 Record the repository commit, Node/npm versions, Foundry build, dnd5e version, active integration versions, and current Hero Engine manifest/version/compatibility metadata.
+- [x] 1.2 Hash and inventory every file in the installed Hero Engine directory and classify repository-versus-installed differences as intentional, generated, or stale.
+- [x] 1.3 Capture T3 browser screenshots and a behavior checklist for the current GM scene-control launcher, GM panel, actor/item search, category filters, Save/Cancel dialogs, actor-sheet button, mechanics popout, and persistent manual-trigger section.
+- [x] 1.4 Export JSON backups of `Thar’gunn` and `Thar’gunn - Ultimate`, including ownership, prototype tokens, items, effects, and flags.
+- [x] 1.5 Create and verify a Foundry world backup plus a timestamped copy of the installed Hero Engine module outside its deployment path.
+- [x] 1.6 Document exact actor IDs, item counts, duplicate subclass candidates, managed weapon source item, current ownership, and the absence of Skeldr and Thar’gunn mechanic state.
 
 ## 2. Port the complete installed-module baseline to source
 
