@@ -43,6 +43,10 @@ export function isRaging(actor: any, ctx?: MechanicContext, now = Date.now()): b
   });
 }
 
+export function ultimateAccessCancelled(result: PromptResult | null): boolean {
+  return result === null || result.dismissed === true;
+}
+
 async function adjustHunger(ctx: MechanicContext, amount: number): Promise<void> {
   await ctx.state.adjust("hungerTemporary", amount);
   await ctx.state.set("hungerTotal", ctx.state.get("hungerTemporary") + ctx.state.get("hungerPermanent"));
@@ -388,7 +392,10 @@ async function activateUltimate(ctx: MechanicContext): Promise<void> {
   });
   if (failures.length && !ctx.state.getFlag<boolean>("ultimateOverride")) throw new Error(`${game.i18n.localize(`${P}.Ultimate.Blocked`)}: ${failures.join(", ")}`);
   let access: PromptResult | null = { promptId: "ultimate-access", success: true };
-  if (!ctx.state.getFlag<boolean>("bondBroken")) access = await ctx.openPrompt("ultimate-access");
+  if (!ctx.state.getFlag<boolean>("bondBroken")) {
+    access = await ctx.openPrompt("ultimate-access");
+    if (ultimateAccessCancelled(access)) return;
+  }
   const usurped = access?.success === false;
   const usurpedNaturalOne = usurped && access?.natural === 1;
   await ctx.state.setFlag("ultimateUsurped", usurped);

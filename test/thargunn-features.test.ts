@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { eligibleFeatures, isRaging } from "../src/plugins/thargunn";
+import { eligibleFeatures, isRaging, ultimateAccessCancelled } from "../src/plugins/thargunn";
 
 describe("Thar’gunn eligible feature extraction", () => {
   afterEach(() => { delete (globalThis as any).game; });
@@ -46,5 +46,12 @@ describe("Thar’gunn eligible feature extraction", () => {
     expect(isRaging(actor, undefined, 3_700_002)).toBe(false);
     const ctx: any = { state: { getFlag: (key: string) => key === "rageExpiresAtWorldTime" ? 501 : 0 } };
     expect(isRaging(actor, ctx, 3_700_002)).toBe(true);
+  });
+
+  it("treats closing or canceling the Ultimate access prompt as an abort", () => {
+    expect(ultimateAccessCancelled(null)).toBe(true);
+    expect(ultimateAccessCancelled({ promptId: "ultimate-access", dismissed: true })).toBe(true);
+    expect(ultimateAccessCancelled({ promptId: "ultimate-access", success: false })).toBe(false);
+    expect(ultimateAccessCancelled({ promptId: "ultimate-access", success: true })).toBe(false);
   });
 });
