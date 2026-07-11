@@ -4,7 +4,6 @@
  * re-render open sheets. Owners get live controls, everyone else read-only.
  */
 import type { MechanicPlugin } from "../api/types";
-import { getCompat } from "../compat";
 import { localize } from "../engine/i18n";
 import { resolveNumeric } from "../engine/formulas";
 import { getPlugin } from "../engine/registry";
@@ -14,6 +13,7 @@ import { canOperate } from "../engine/sockets";
 import { readState, resolveAttachments, type Attachment, type InstanceState } from "../engine/state";
 import { activeThresholds } from "../engine/trackers";
 import { escapeHtml } from "./chat-cards";
+import { createApp } from "./app-base";
 
 export function registerSheetPanel(): void {
   const inject = (app: any, element: HTMLElement | any) => {
@@ -22,13 +22,93 @@ export function registerSheetPanel(): void {
     if (!root || !actor || actor.documentName !== "Actor") return;
     const attachments = resolveAttachments(actor);
     if (!attachments.length) return;
-    const html = renderPanel(actor, attachments);
-    if (getCompat().injectIntoActorSheet(app, root, html)) {
-      bindPanel(root, actor);
-    }
+    root.querySelector(".hero-engine-panel")?.remove();
+    injectMechanicsLauncher(root, actor);
   };
   Hooks.on("renderActorSheetV2", inject);
   Hooks.on("renderActorSheet", inject);
+}
+
+const actorMechanicsApps = new Map<string, any>();
+
+function injectMechanicsLauncher(root: HTMLElement, actor: any): void {
+  if (root.querySelector("[data-he-open-mechanics]")) return;
+  const sheetControls = root.querySelector<HTMLElement>(".sheet-header-buttons");
+  const windowControls = root.querySelector<HTMLElement>(".window-header");
+  const anchor = sheetControls ?? windowControls;
+  if (!anchor) return;
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = sheetControls
+    ? "gold-button he-sheet-launch"
+    : "header-control icon fa-solid fa-bolt he-sheet-launch";
+  button.dataset["heOpenMechanics"] = "1";
+  button.setAttribute("aria-label", localize("HEROENGINE.Panel.Open"));
+  button.title = localize("HEROENGINE.Panel.Open");
+  if (sheetControls) button.innerHTML = '<i class="fa-solid fa-bolt"></i>';
+  button.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    openActorMechanics(actor);
+  });
+  if (sheetControls) anchor.appendChild(button);
+  else {
+    const close = anchor.querySelector("[data-action='close'], .close");
+    anchor.insertBefore(button, close ?? null);
+  }
+}
+
+export function openActorMechanics(actor: any): any {
+  const current = actorMechanicsApps.get(actor.id);
+  if (current) {
+    current.render(true);
+    return current;
+  }
+  let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+  const openTriggerPlugins = new Set<string>();
+  const scheduleRefresh = () => {
+    if (refreshTimer) clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(() => app.render(), 650);
+  };
+  const estimatedHeight = Math.min(760, Math.max(480, 120 + resolveAttachments(actor).reduce((sum, attachment) => {
+    const plugin = getPlugin(attachment.pluginId);
+    if (!plugin) return sum;
+    const rows = (plugin.trackers?.length ?? 0) + (plugin.resources?.length ?? 0) + (plugin.stances?.length ?? 0);
+    const actionRows = Math.ceil((plugin.actions?.length ?? 0) / 2);
+    return sum + 150 + rows * 52 + actionRows * 45 + ((plugin.triggers?.length ?? 0) ? 45 : 0);
+  }, 0)));
+  const app = createApp({
+    id: `hero-engine-actor-mechanics-${actor.id}`,
+    title: `${actor.name} — ${localize("HEROENGINE.Panel.Title")}`,
+    width: 640,
+    height: estimatedHeight,
+    render: () => `<div class="hero-engine-actor-window">${renderPanel(actor, resolveAttachments(actor))}</div>`,
+    bind: (root) => {
+      bindPanel(root, actor);
+      root.querySelectorAll<HTMLDetailsElement>("details.he-triggers").forEach((details) => {
+        const pluginId = details.closest<HTMLElement>(".he-mechanic")?.dataset["plugin"];
+        if (pluginId && openTriggerPlugins.has(pluginId)) details.open = true;
+        details.addEventListener("toggle", () => {
+          if (!pluginId) return;
+          if (details.open) openTriggerPlugins.add(pluginId);
+          else openTriggerPlugins.delete(pluginId);
+        });
+      });
+      root.addEventListener("click", (event) => {
+        if ((event.target as HTMLElement).closest("button[data-he]")) scheduleRefresh();
+      });
+      root.addEventListener("change", (event) => {
+        if ((event.target as HTMLElement).closest("select[data-he]")) scheduleRefresh();
+      });
+    },
+    onClose: () => {
+      if (refreshTimer) clearTimeout(refreshTimer);
+      actorMechanicsApps.delete(actor.id);
+    },
+  });
+  actorMechanicsApps.set(actor.id, app);
+  app.render(true);
+  return app;
 }
 
 function renderPanel(actor: any, attachments: Attachment[]): string {
@@ -40,7 +120,10 @@ function renderPanel(actor: any, attachments: Attachment[]): string {
       return renderMechanic(att, plugin, state, canOperate(actor));
     })
     .join("");
-  return `<section class="hero-engine-panel"><h2>${localize("HEROENGINE.Panel.Title")}</h2>${sections}</section>`;
+  return `<section class="hero-engine-panel">
+    <header class="he-panel-header"><span><i class="fa-solid fa-bolt"></i></span><div>
+      <h2>${localize("HEROENGINE.Panel.Title")}</h2><p>${localize("HEROENGINE.Panel.Subtitle")}</p>
+    </div></header>${sections}</section>`;
 }
 
 function renderMechanic(att: Attachment, plugin: MechanicPlugin, state: InstanceState, editable: boolean): string {
@@ -48,7 +131,8 @@ function renderMechanic(att: Attachment, plugin: MechanicPlugin, state: Instance
   const dis = editable ? "" : "disabled";
   const parts: string[] = [];
 
-  parts.push(`<h3>${escapeHtml(localize(plugin.nameKey))}</h3>`);
+  parts.push(`<header class="he-mechanic-header"><div><h3>${escapeHtml(localize(plugin.nameKey))}</h3>
+    <p>${escapeHtml(plugin.descriptionKey ? localize(plugin.descriptionKey) : "")}</p></div><span>${escapeHtml(plugin.archetype)}</span></header>`);
 
   // Trackers with threshold badges and GM +/- controls.
   for (const t of plugin.trackers ?? []) {
@@ -57,13 +141,15 @@ function renderMechanic(att: Attachment, plugin: MechanicPlugin, state: Instance
     const badges = activeThresholds(value, t.thresholds ?? [])
       .map((th) => `<span class="he-badge" title="${escapeHtml(localize(th.descriptionKey ?? th.labelKey))}">${escapeHtml(localize(th.labelKey))}</span>`)
       .join("");
+    const pct = typeof max === "number" && max > 0 ? Math.min(100, Math.max(0, value / max * 100)) : null;
     const gmButtons = game.user.isGM
-      ? `<button type="button" data-he="adjust" data-plugin="${plugin.id}" data-id="${t.id}" data-delta="-${t.step ?? 1}">-</button>
-         <button type="button" data-he="adjust" data-plugin="${plugin.id}" data-id="${t.id}" data-delta="${t.step ?? 1}">+</button>`
+      ? `<button type="button" class="he-step" data-he="adjust" data-plugin="${plugin.id}" data-id="${t.id}" data-delta="-${t.step ?? 1}"><i class="fa-solid fa-minus"></i></button>
+         <button type="button" class="he-step" data-he="adjust" data-plugin="${plugin.id}" data-id="${t.id}" data-delta="${t.step ?? 1}"><i class="fa-solid fa-plus"></i></button>`
       : "";
     parts.push(
-      `<div class="he-row he-tracker"><label>${escapeHtml(localize(t.labelKey))}</label>
-        <span class="he-value">${value}${max !== null ? ` / ${max}` : ""}</span>${gmButtons}${badges}</div>`
+      `<div class="he-row he-tracker"><div class="he-row-main"><label>${escapeHtml(localize(t.labelKey))}${badges}</label>
+        <span class="he-value">${value}${max !== null ? ` / ${max}` : ""}</span>${gmButtons}</div>
+        ${pct !== null ? `<span class="he-meter"><i style="width:${pct}%"></i></span>` : ""}</div>`
     );
   }
 
@@ -71,13 +157,15 @@ function renderMechanic(att: Attachment, plugin: MechanicPlugin, state: Instance
   for (const r of plugin.resources ?? []) {
     const value = state.values[r.id] ?? 0;
     const max = safeNum(r.max, data);
+    const pct = typeof max === "number" && max > 0 ? Math.min(100, Math.max(0, value / max * 100)) : null;
     const gmButtons = game.user.isGM
-      ? `<button type="button" data-he="adjust" data-plugin="${plugin.id}" data-id="${r.id}" data-delta="-1">-</button>
-         <button type="button" data-he="adjust" data-plugin="${plugin.id}" data-id="${r.id}" data-delta="1">+</button>`
+      ? `<button type="button" class="he-step" data-he="adjust" data-plugin="${plugin.id}" data-id="${r.id}" data-delta="-1"><i class="fa-solid fa-minus"></i></button>
+         <button type="button" class="he-step" data-he="adjust" data-plugin="${plugin.id}" data-id="${r.id}" data-delta="1"><i class="fa-solid fa-plus"></i></button>`
       : "";
     parts.push(
-      `<div class="he-row he-resource"><label>${escapeHtml(localize(r.labelKey))}</label>
-        <span class="he-value">${value} / ${max}</span>${gmButtons}</div>`
+      `<div class="he-row he-resource"><div class="he-row-main"><label>${escapeHtml(localize(r.labelKey))}</label>
+        <span class="he-value">${value} / ${max}</span>${gmButtons}</div>
+        ${pct !== null ? `<span class="he-meter"><i style="width:${pct}%"></i></span>` : ""}</div>`
     );
   }
 
@@ -85,11 +173,11 @@ function renderMechanic(att: Attachment, plugin: MechanicPlugin, state: Instance
   if (state.transform) {
     const def = plugin.transformations?.find((t) => t.id === state.transform!.id);
     parts.push(
-      `<div class="he-row he-transform"><label>${escapeHtml(localize("HEROENGINE.Panel.Transform"))}</label>
+      `<div class="he-row he-transform"><div class="he-row-main"><label><i class="fa-solid fa-wand-sparkles"></i>${escapeHtml(localize("HEROENGINE.Panel.Transform"))}</label>
         <span class="he-value">${escapeHtml(def ? localize(def.labelKey) : state.transform.id)} — ${localize(
           "HEROENGINE.Panel.RoundsLeft",
           { rounds: state.transform.roundsLeft }
-        )}</span></div>`
+        )}</span></div></div>`
     );
   }
 
@@ -104,8 +192,8 @@ function renderMechanic(att: Attachment, plugin: MechanicPlugin, state: Instance
       ),
     ].join("");
     parts.push(
-      `<div class="he-row he-stance"><label>${escapeHtml(localize(g.labelKey))}</label>
-        <select data-he="stance" data-plugin="${plugin.id}" data-id="${g.id}" ${dis}>${options}</select></div>`
+      `<div class="he-row he-stance"><div class="he-row-main"><label><i class="fa-solid fa-person-rays"></i>${escapeHtml(localize(g.labelKey))}</label>
+        <select data-he="stance" data-plugin="${plugin.id}" data-id="${g.id}" ${dis}>${options}</select></div></div>`
     );
   }
 
@@ -124,7 +212,7 @@ function renderMechanic(att: Attachment, plugin: MechanicPlugin, state: Instance
         ${escapeHtml(localize(a.labelKey))}${costText ? ` [${costText}]` : ""}${cdText}</button>`;
     })
     .join("");
-  if (actionButtons) parts.push(`<div class="he-actions">${actionButtons}</div>`);
+  if (actionButtons) parts.push(`<section class="he-action-block"><header><i class="fa-solid fa-bolt"></i><span>${escapeHtml(localize("HEROENGINE.Panel.Actions"))}</span></header><div class="he-actions">${actionButtons}</div></section>`);
 
   // Manual trigger fallbacks.
   const triggerButtons = (plugin.triggers ?? [])
@@ -137,7 +225,7 @@ function renderMechanic(att: Attachment, plugin: MechanicPlugin, state: Instance
     .join("");
   if (triggerButtons) {
     parts.push(
-      `<details class="he-triggers"><summary>${localize("HEROENGINE.Panel.ManualTriggers")}</summary>${triggerButtons}</details>`
+      `<details class="he-triggers"><summary><i class="fa-solid fa-hand"></i>${localize("HEROENGINE.Panel.ManualTriggers")}<i class="fa-solid fa-chevron-down"></i></summary><div class="he-trigger-grid">${triggerButtons}</div></details>`
     );
   }
 

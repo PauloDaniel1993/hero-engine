@@ -9,15 +9,15 @@
 
 ## 2. Port the complete installed-module baseline to source
 
-- [ ] 2.1 Port intentional module/Foundry compatibility version and manifest metadata changes from the installed module to repository source.
-- [ ] 2.2 Port the installed GM scene-control button and application-opening behavior into TypeScript source.
-- [ ] 2.3 Port the actor-sheet Mechanics launcher, standalone mechanics popout, size behavior, and open-section persistence into TypeScript source.
-- [ ] 2.4 Port searchable actor selection, count/empty states, and the searchable category-filtered item binding picker with explicit Save and Cancel.
-- [ ] 2.5 Port the improved confirmation, choice, input, configuration, chat-card, and GM-panel markup into source.
-- [ ] 2.6 Port the installed 1,393-line CSS behavior into maintainable source styles without copying obsolete selectors blindly.
-- [ ] 2.7 Port and reconcile all installed pt-BR and English localization additions.
-- [ ] 2.8 Add regression checks for the ported baseline and verify `npm test`, `npm run check`, and `npm run build` before beginning Thar’gunn features.
-- [ ] 2.9 Deploy the baseline-only build to the backed-up world and reproduce the captured T3 browser behavior with no regressions.
+- [x] 2.1 Port intentional module/Foundry compatibility version and manifest metadata changes from the installed module to repository source.
+- [x] 2.2 Port the installed GM scene-control button and application-opening behavior into TypeScript source.
+- [x] 2.3 Port the actor-sheet Mechanics launcher, standalone mechanics popout, size behavior, and open-section persistence into TypeScript source.
+- [x] 2.4 Port searchable actor selection, count/empty states, and the searchable category-filtered item binding picker with explicit Save and Cancel.
+- [x] 2.5 Port the improved confirmation, choice, input, configuration, chat-card, and GM-panel markup into source.
+- [x] 2.6 Port the installed 1,393-line CSS behavior into maintainable source styles without copying obsolete selectors blindly.
+- [x] 2.7 Port and reconcile all installed pt-BR and English localization additions.
+- [x] 2.8 Add regression checks for the ported baseline and verify `npm test`, `npm run check`, and `npm run build` before beginning Thar’gunn features.
+- [x] 2.9 Deploy the baseline-only build to the backed-up world and reproduce the captured T3 browser behavior with no regressions.
 
 ## 3. Record collection public API and state schema
 

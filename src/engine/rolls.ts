@@ -46,6 +46,12 @@ export async function rollSaveVsDc(actor: any, ability: string, dc: number): Pro
 export async function postChat(actor: any, key: string, data?: Record<string, unknown>): Promise<void> {
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor }),
-    content: `<div class="hero-engine-chat">${localize(key, data)}</div>`,
+    content: `<div class="hero-engine-chat"><span class="he-chat-mark"><i class="fa-solid fa-bolt"></i></span><div class="he-chat-copy">
+      <strong>${escapeHtml(localize("HEROENGINE.Panel.EngineName"))}</strong><span>${escapeHtml(localize(key, data))}</span>
+    </div></div>`,
   });
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }

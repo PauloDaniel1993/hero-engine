@@ -46,9 +46,17 @@ export function openConfigForm(plugin: MechanicPlugin, mode: Mode): void {
       if (!groups.has(g)) groups.set(g, []);
       groups.get(g)!.push(field);
     }
-    let html = `<form class="hero-engine-config">`;
+    let html = `<form class="hero-engine-config"><header class="he-config-hero">
+      <span class="he-config-hero-icon"><i class="fa-solid fa-sliders"></i></span><div><h2>${escapeHtml(localize(plugin.nameKey))}</h2>
+      <p>${escapeHtml(localize(mode.kind === "world" ? "HEROENGINE.Config.WorldSubtitle" : "HEROENGINE.Config.OverrideSubtitle"))}</p></div>
+      </header><div class="he-config-groups">`;
+    let groupIndex = 0;
+    const groupIcons = ["fa-bolt", "fa-coins", "fa-scale-balanced", "fa-dice-d20", "fa-wand-sparkles", "fa-gears"];
     for (const [groupKey, fields] of groups) {
-      if (groupKey) html += `<h3>${escapeHtml(localize(groupKey))}</h3>`;
+      const groupLabel = groupKey ? escapeHtml(localize(groupKey)) : escapeHtml(localize("HEROENGINE.Config.General"));
+      const icon = groupIcons[groupIndex % groupIcons.length] ?? "fa-gears";
+      html += `<section class="he-config-group"><header><span><i class="fa-solid ${icon}"></i></span><div><h3>${groupLabel}</h3>
+        <small>${localize("HEROENGINE.Config.Options", { count: fields.length })}</small></div></header><div class="he-config-fields">`;
       for (const field of fields) {
         const hasOwn = Object.prototype.hasOwnProperty.call(values, field.key);
         const effective = hasOwn
@@ -58,11 +66,13 @@ export function openConfigForm(plugin: MechanicPlugin, mode: Mode): void {
             : defaults[field.key];
         html += renderField(field, effective, mode.kind === "override", hasOwn);
       }
+      html += `</div></section>`;
+      groupIndex += 1;
     }
-    html += `<div class="he-form-footer">
-      <span class="he-error" data-he-error></span>
-      <button type="submit">${localize("HEROENGINE.Config.Save")}</button>
-    </div></form>`;
+    html += `</div><footer class="he-form-footer"><span class="he-error" data-he-error></span><div class="he-config-actions">
+      <button type="button" class="he-config-cancel" data-he-config-cancel><i class="fa-solid fa-xmark"></i>${localize("HEROENGINE.Config.Cancel")}</button>
+      <button type="submit" class="he-config-save"><i class="fa-solid fa-floppy-disk"></i>${localize("HEROENGINE.Config.Save")}</button>
+      </div></footer></form>`;
     return html;
   };
 
@@ -71,12 +81,14 @@ export function openConfigForm(plugin: MechanicPlugin, mode: Mode): void {
     title: `${localize(plugin.nameKey)} — ${localize(
       mode.kind === "world" ? "HEROENGINE.Config.WorldTitle" : "HEROENGINE.Config.OverrideTitle"
     )}`,
-    width: 520,
+    width: 720,
+    height: Math.min(720, Math.max(500, 280 + new Set(schema.map((field) => field.groupKey ?? "")).size * 55 + Math.ceil(schema.length / 2) * 96)),
     render,
     bind: (root) => {
       const form = root.querySelector<HTMLFormElement>("form")!;
       const errorEl = root.querySelector<HTMLElement>("[data-he-error]")!;
       const vars = mechanicVariables(plugin);
+      root.querySelector<HTMLElement>("[data-he-config-cancel]")?.addEventListener("click", () => app.close());
 
       // Live preview on formula/dice input.
       form.querySelectorAll<HTMLInputElement>("input[data-he-preview]").forEach((input) => {
@@ -149,7 +161,7 @@ export function openConfigForm(plugin: MechanicPlugin, mode: Mode): void {
 
 function renderField(field: ConfigFieldDef, value: unknown, overrideMode: boolean, hasOwn: boolean): string {
   const label = escapeHtml(localize(field.labelKey));
-  const hint = field.hintKey ? `<p class="he-hint">${escapeHtml(localize(field.hintKey))}</p>` : "";
+  const hint = field.hintKey ? `<small class="he-hint">${escapeHtml(localize(field.hintKey))}</small>` : "";
   const overrideToggle = overrideMode
     ? `<input type="checkbox" name="${field.key}::override" title="${localize(
         "HEROENGINE.Config.OverrideThis"
@@ -184,5 +196,6 @@ function renderField(field: ConfigFieldDef, value: unknown, overrideMode: boolea
     default:
       control = `<input type="text" name="${field.key}" value="${escapeHtml(String(value ?? ""))}" />`;
   }
-  return `<div class="form-group he-field"><label>${label}</label>${control}${overrideToggle}${hint}</div>`;
+  return `<div class="he-field"><div class="he-field-copy"><label>${label}</label>${hint}</div>
+    <div class="he-field-control">${control}${overrideToggle}</div></div>`;
 }

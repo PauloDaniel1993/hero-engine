@@ -7,8 +7,10 @@ export interface HeAppSpec {
   id: string;
   title: string;
   width?: number;
+  height?: number | "auto";
   render(): string;
   bind(root: HTMLElement, app: any): void;
+  onClose?(app: any): void;
 }
 
 export function createApp(spec: HeAppSpec): any {
@@ -17,7 +19,7 @@ export function createApp(spec: HeAppSpec): any {
     static DEFAULT_OPTIONS = {
       id: spec.id,
       window: { title: spec.title, resizable: true },
-      position: { width: spec.width ?? 560, height: "auto" },
+      position: { width: spec.width ?? 560, height: spec.height ?? "auto" },
     };
     protected async _renderHTML(): Promise<string> {
       return spec.render();
@@ -25,6 +27,11 @@ export function createApp(spec: HeAppSpec): any {
     protected _replaceHTML(result: string, content: HTMLElement): void {
       content.innerHTML = result;
       spec.bind(content, this);
+    }
+    async close(options: Record<string, unknown> = {}): Promise<unknown> {
+      const result = await super.close(options);
+      spec.onClose?.(this);
+      return result;
     }
   }
   return new HeApp();

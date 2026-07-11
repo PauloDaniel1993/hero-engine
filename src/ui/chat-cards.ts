@@ -23,12 +23,12 @@ export async function postCard(
   const buttonsHtml = opts.buttons
     .map(
       (b) =>
-        `<button type="button" data-he-card-action="${b.actionId}">${escapeHtml(localize(b.labelKey))}</button>`
+        `<button type="button" data-he-card-action="${b.actionId}"><i class="fa-solid fa-bolt"></i><span>${escapeHtml(localize(b.labelKey))}</span><i class="fa-solid fa-chevron-right"></i></button>`
     )
     .join("");
   const content = `
     <div class="hero-engine-card">
-      <header><strong>${escapeHtml(localize(opts.titleKey))}</strong></header>
+      <header><span><i class="fa-solid fa-wand-sparkles"></i></span><div><small>${escapeHtml(localize("HEROENGINE.Panel.EngineName"))}</small><strong>${escapeHtml(localize(opts.titleKey))}</strong></div></header>
       ${opts.bodyKey ? `<div class="he-card-body">${escapeHtml(localize(opts.bodyKey, opts.bodyData))}</div>` : ""}
       <div class="he-card-buttons">${buttonsHtml}</div>
     </div>`;

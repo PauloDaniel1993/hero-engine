@@ -3,6 +3,8 @@
  * Foundry v13/v14 or dnd5e majors lives here — nothing outside src/compat/
  * may branch on version.
  */
+import { localize } from "../engine/i18n";
+import { createApp } from "../ui/app-base";
 
 export interface RestEvent {
   actor: any;
@@ -46,23 +48,54 @@ export interface Compat {
   revertOriginalForm(actor: any): Promise<void>;
 }
 
-function dialogApi(): any {
-  return foundry.applications?.api?.DialogV2 ?? null;
+function escapeHtml(value: unknown): string {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 async function confirmDialog(opts: { title: string; content: string }): Promise<boolean> {
-  const DialogV2 = dialogApi();
-  if (DialogV2) {
-    const result = await DialogV2.confirm({
-      window: { title: opts.title },
-      content: opts.content,
-      rejectClose: false,
-    });
-    return result === true;
+  if (!foundry.applications?.api?.ApplicationV2) {
+    return new Promise((resolve) =>
+      Dialog.confirm({ title: opts.title, content: opts.content, yes: () => resolve(true), no: () => resolve(false) })
+    );
   }
-  return new Promise((resolve) =>
-    Dialog.confirm({ title: opts.title, content: opts.content, yes: () => resolve(true), no: () => resolve(false) })
-  );
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (value: boolean) => {
+      if (settled) return;
+      settled = true;
+      resolve(value);
+    };
+    const app = createApp({
+      id: `hero-engine-confirm-${foundry.utils.randomID()}`,
+      title: opts.title,
+      width: 500,
+      render: () => `<form class="hero-engine-dialog he-dialog-confirm">
+        <header class="he-dialog-hero"><span class="he-dialog-icon"><i class="fa-solid fa-shield-halved"></i></span><div>
+          <h2>${escapeHtml(opts.title)}</h2><p>${escapeHtml(localize("HEROENGINE.Dialog.ConfirmSubtitle"))}</p>
+        </div></header>
+        <div class="he-dialog-content"><div class="he-dialog-message">${escapeHtml(opts.content)}</div></div>
+        <footer class="he-dialog-footer"><button type="button" class="he-dialog-secondary" data-he-dialog-cancel><i class="fa-solid fa-xmark"></i>${escapeHtml(localize("HEROENGINE.Dialog.Cancel"))}</button>
+          <button type="submit" class="he-dialog-primary"><i class="fa-solid fa-check"></i>${escapeHtml(localize("HEROENGINE.Dialog.Confirm"))}</button></footer>
+      </form>`,
+      onClose: () => finish(false),
+      bind: (root) => {
+        root.querySelector<HTMLElement>("[data-he-dialog-cancel]")?.addEventListener("click", async () => {
+          finish(false);
+          await app.close();
+        });
+        root.querySelector("form")?.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          finish(true);
+          await app.close();
+        });
+      },
+    });
+    app.render(true);
+  });
 }
 
 async function buttonsDialog(opts: {
@@ -71,59 +104,95 @@ async function buttonsDialog(opts: {
   buttons: { id: string; label: string }[];
   dismissable?: boolean;
 }): Promise<string | null> {
-  const DialogV2 = dialogApi();
-  if (DialogV2) {
-    try {
-      const result = await DialogV2.wait({
-        window: { title: opts.title },
-        content: opts.content,
-        buttons: opts.buttons.map((b, i) => ({ action: b.id, label: b.label, default: i === 0 })),
-        rejectClose: !opts.dismissable ? false : false,
-      });
-      return typeof result === "string" ? result : null;
-    } catch {
-      return null;
-    }
+  if (!foundry.applications?.api?.ApplicationV2) {
+    return new Promise((resolve) => {
+      const buttons: Record<string, unknown> = {};
+      for (const b of opts.buttons) buttons[b.id] = { label: b.label, callback: () => resolve(b.id) };
+      new Dialog({ title: opts.title, content: opts.content, buttons, close: () => resolve(null) }).render(true);
+    });
   }
   return new Promise((resolve) => {
-    const buttons: Record<string, unknown> = {};
-    for (const b of opts.buttons) buttons[b.id] = { label: b.label, callback: () => resolve(b.id) };
-    new Dialog({ title: opts.title, content: opts.content, buttons, close: () => resolve(null) }).render(true);
+    let settled = false;
+    const finish = (value: string | null) => {
+      if (settled) return;
+      settled = true;
+      resolve(value);
+    };
+    const choices = opts.buttons.map((button, index) => `<button type="button" class="he-dialog-choice" data-he-dialog-choice="${escapeHtml(button.id)}">
+      <span class="he-choice-number">${index + 1}</span><span>${escapeHtml(button.label)}</span><i class="fa-solid fa-chevron-right"></i>
+    </button>`).join("");
+    const app = createApp({
+      id: `hero-engine-choice-${foundry.utils.randomID()}`,
+      title: opts.title,
+      width: 560,
+      render: () => `<div class="hero-engine-dialog he-dialog-choices">
+        <header class="he-dialog-hero"><span class="he-dialog-icon"><i class="fa-solid fa-diamond"></i></span><div>
+          <h2>${escapeHtml(opts.title)}</h2><p>${escapeHtml(localize("HEROENGINE.Dialog.ChooseSubtitle"))}</p>
+        </div></header>
+        <div class="he-dialog-content">${opts.content ? `<div class="he-dialog-richtext">${opts.content}</div>` : ""}<div class="he-choice-grid">${choices}</div></div>
+        <footer class="he-dialog-footer"><span class="he-dialog-hint"><i class="fa-regular fa-hand-pointer"></i>${escapeHtml(localize("HEROENGINE.Dialog.ChooseHint"))}</span>
+          <button type="button" class="he-dialog-secondary" data-he-dialog-cancel><i class="fa-solid fa-xmark"></i>${escapeHtml(localize("HEROENGINE.Dialog.Cancel"))}</button></footer>
+      </div>`,
+      onClose: () => finish(null),
+      bind: (root) => {
+        root.querySelectorAll<HTMLElement>("[data-he-dialog-choice]").forEach((button) => button.addEventListener("click", async () => {
+          finish(button.dataset["heDialogChoice"] ?? null);
+          await app.close();
+        }));
+        root.querySelector<HTMLElement>("[data-he-dialog-cancel]")?.addEventListener("click", async () => {
+          finish(null);
+          await app.close();
+        });
+      },
+    });
+    app.render(true);
   });
 }
 
 async function inputDialog(opts: { title: string; label: string; initial?: string }): Promise<string | null> {
-  const content = `<form><div class="form-group"><label>${opts.label}</label>
-    <input type="text" name="he-input" value="${opts.initial ?? ""}" autofocus /></div></form>`;
-  const DialogV2 = dialogApi();
-  if (DialogV2) {
-    try {
-      const result = await DialogV2.prompt({
-        window: { title: opts.title },
-        content,
-        ok: {
-          callback: (_ev: unknown, button: any) =>
-            button.form?.elements?.["he-input"]?.value ?? null,
-        },
-        rejectClose: false,
-      });
-      return typeof result === "string" ? result : null;
-    } catch {
-      return null;
-    }
+  if (!foundry.applications?.api?.ApplicationV2) {
+    const content = `<form><div class="form-group"><label>${escapeHtml(opts.label)}</label><input type="text" name="he-input" value="${escapeHtml(opts.initial)}" autofocus /></div></form>`;
+    return new Promise((resolve) => {
+      new Dialog({ title: opts.title, content, buttons: { ok: { label: "OK", callback: (html: any) => resolve(html.find?.("[name=he-input]")?.val() ?? null) } }, close: () => resolve(null) }).render(true);
+    });
   }
   return new Promise((resolve) => {
-    new Dialog({
+    let settled = false;
+    const finish = (value: string | null) => {
+      if (settled) return;
+      settled = true;
+      resolve(value);
+    };
+    const app = createApp({
+      id: `hero-engine-input-${foundry.utils.randomID()}`,
       title: opts.title,
-      content,
-      buttons: {
-        ok: {
-          label: "OK",
-          callback: (html: any) => resolve(html.find?.("[name=he-input]")?.val() ?? null),
-        },
+      width: 520,
+      render: () => `<form class="hero-engine-dialog he-dialog-input">
+        <header class="he-dialog-hero"><span class="he-dialog-icon"><i class="fa-solid fa-pen-to-square"></i></span><div>
+          <h2>${escapeHtml(opts.title)}</h2><p>${escapeHtml(localize("HEROENGINE.Dialog.InputSubtitle"))}</p>
+        </div></header>
+        <div class="he-dialog-content"><label class="he-dialog-field"><span>${escapeHtml(opts.label)}</span>
+          <div><i class="fa-solid fa-arrow-right-arrow-left"></i><input type="text" name="he-input" value="${escapeHtml(opts.initial)}" autocomplete="off" /></div>
+        </label></div>
+        <footer class="he-dialog-footer"><button type="button" class="he-dialog-secondary" data-he-dialog-cancel><i class="fa-solid fa-xmark"></i>${escapeHtml(localize("HEROENGINE.Dialog.Cancel"))}</button>
+          <button type="submit" class="he-dialog-primary"><i class="fa-solid fa-check"></i>${escapeHtml(localize("HEROENGINE.Dialog.Apply"))}</button></footer>
+      </form>`,
+      onClose: () => finish(null),
+      bind: (root) => {
+        const input = root.querySelector<HTMLInputElement>("[name='he-input']")!;
+        root.querySelector<HTMLElement>("[data-he-dialog-cancel]")?.addEventListener("click", async () => {
+          finish(null);
+          await app.close();
+        });
+        root.querySelector("form")?.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          finish(input.value);
+          await app.close();
+        });
+        requestAnimationFrame(() => input.focus({ preventScroll: true }));
       },
-      close: () => resolve(null),
-    }).render(true);
+    });
+    app.render(true);
   });
 }
 
@@ -196,12 +265,17 @@ function injectIntoActorSheet(_app: any, root: HTMLElement, panelHtml: string): 
   const panel = container.firstElementChild as HTMLElement | null;
   if (!panel) return false;
   // Preferred anchors across dnd5e sheet generations, most specific first.
+  const modernDetails = root.querySelector<HTMLElement>('.tab[data-tab="details"]');
+  const modernColumn = modernDetails?.querySelector<HTMLElement>(".right");
   const anchor =
+    modernColumn ??
+    modernDetails ??
     root.querySelector(".tab.details") ??
     root.querySelector(".sheet-body") ??
     root.querySelector(".window-content") ??
     root;
-  anchor.appendChild(panel);
+  if (modernColumn) anchor.prepend(panel);
+  else anchor.appendChild(panel);
   return true;
 }
 
