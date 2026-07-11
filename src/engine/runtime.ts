@@ -39,6 +39,7 @@ import {
 import type { Bounds } from "./trackers";
 import { applyDelta, thresholdsCrossed } from "./trackers";
 import { makeRecordAccessor } from "./records";
+import { notifyMechanicSettled } from "./events";
 
 /** Cooldown sentinels stored in state.cooldowns. */
 const CD_READY = -1;
@@ -364,6 +365,14 @@ export async function clearEventCooldowns(
 // Actions
 
 export async function executeAction(att: Attachment, actionId: string): Promise<void> {
+  try {
+    await executeActionInternal(att, actionId);
+  } finally {
+    notifyMechanicSettled(att, "action", actionId);
+  }
+}
+
+async function executeActionInternal(att: Attachment, actionId: string): Promise<void> {
   const plugin = getPlugin(att.pluginId);
   if (!plugin) return;
   const action = plugin.actions?.find((a) => a.id === actionId);

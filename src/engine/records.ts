@@ -11,6 +11,7 @@ import type {
 } from "../api/types";
 import { canOperate } from "./sockets";
 import { appendAudit, mutateState, readState, type Attachment, type InstanceState } from "./state";
+import { notifyMechanicSettled } from "./events";
 
 export function isJsonSafe(value: unknown, seen = new Set<object>()): value is JsonValue {
   if (value === null || typeof value === "string" || typeof value === "boolean") return true;
@@ -347,7 +348,11 @@ export function makeRecordAccessor(att: Attachment, plugin: MechanicPlugin, getC
       if (!action || !record) throw new Error("hero-engine: record action not found");
       if (action.gmOnly && !game.user?.isGM) throw new Error("hero-engine: record action is GM-only");
       if (action.ownerOnly && !canOperate(att.canonicalActor)) throw new Error("hero-engine: record action requires ownership");
-      await plugin.hooks?.onRecordAction?.(getContext(), def, record, action);
+      try {
+        await plugin.hooks?.onRecordAction?.(getContext(), def, record, action);
+      } finally {
+        notifyMechanicSettled(att, "record-action", `${collectionId}:${recordId}:${actionId}`);
+      }
     },
   };
 }

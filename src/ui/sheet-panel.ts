@@ -16,6 +16,8 @@ import { escapeHtml } from "./chat-cards";
 import { createApp } from "./app-base";
 import { buildRecordRenderModel } from "./record-model";
 import { ensureAttachmentReady } from "../engine/records";
+import { MECHANIC_SETTLED_HOOK, type MechanicSettlement } from "../engine/events";
+import { canonicalActor } from "../engine/state";
 
 export function registerSheetPanel(): void {
   const inject = (app: any, element: HTMLElement | any) => {
@@ -131,6 +133,7 @@ export function openActorMechanics(actor: any): any {
   const watch = (event: string) => {
     const id = Hooks.on(event, (document: any) => {
       const related = new Set<string>([actor.id]);
+      related.add(canonicalActor(actor)?.id);
       for (const attachment of resolveAttachments(actor)) {
         related.add((attachment.actor as any)?.id);
         related.add((attachment.canonicalActor as any)?.id);
@@ -142,6 +145,16 @@ export function openActorMechanics(actor: any): any {
     hookRegistrations.push({ event, id });
   };
   for (const event of ["updateActor", "createItem", "updateItem", "deleteItem", "createActiveEffect", "updateActiveEffect", "deleteActiveEffect"]) watch(event);
+  const settledHookId = Hooks.on(MECHANIC_SETTLED_HOOK, (settlement: MechanicSettlement) => {
+    const related = new Set<string>([actor.id, canonicalActor(actor)?.id]);
+    for (const attachment of resolveAttachments(actor)) {
+      related.add((attachment.actor as any)?.id);
+      related.add((attachment.canonicalActor as any)?.id);
+      related.add((attachment.stateDoc as any)?.id);
+    }
+    if (settlement.pluginId && settlement.actorIds.some((id) => related.has(id))) scheduleRefresh(0);
+  });
+  hookRegistrations.push({ event: MECHANIC_SETTLED_HOOK, id: settledHookId });
   app.render(true);
   return app;
 }
