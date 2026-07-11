@@ -4,7 +4,8 @@ A **mechanic** (a weapon's or character's bespoke ruleset) is a plain object
 implementing `MechanicPlugin`. Typed declarations live in `types/types.d.ts`
 (emitted from `src/api/types.ts`) — point your editor at them for autocomplete.
 
-The engine supplies: state persistence (actor/item flags), clamped trackers
+The engine supplies: state persistence (actor/item flags), versioned structured
+record collections, clamped trackers
 with threshold ladders, resource pools with recharge rules, a trigger bus over
 dnd5e events, save/choice prompts, stances, timed transformations, consequence
 tables, a GM adjudication queue, auto-generated config UI (world defaults +
@@ -42,6 +43,7 @@ commented minimal plugin (one resource, one recharge, one trigger, one action).
 | `tables` | dice consequence tables | d6 Preço do Poder |
 | `adjudications` | GM judgment calls (confirm/choice) | "valid sentient sacrifice?"; oath progress |
 | `configSchema` | every tunable knob | all of the above's numbers, dice and formulas |
+| `recordCollections` | dynamic slotted records with actions, expiry, pending replacement and migrations | Thar’gunn's Hollow Echoes and Recorded Legends |
 | `hooks` | code escape hatch | Deimos' two-outcome Ultimate branching |
 
 ### Engine events
@@ -108,6 +110,10 @@ receives a `MechanicContext`:
 ctx.config(key)                 // resolved config value
 ctx.state.get/set/adjust        // clamped tracker/resource access
 ctx.state.getFlag/setFlag       // named state flags
+ctx.records.list/get/create     // structured record registry
+ctx.records.update/remove       // authoritative record mutation
+ctx.records.replacePending      // atomic full-slot replacement
+ctx.requestSecureTarget(...)    // owner request revalidated by the active GM
 ctx.evalFormula("@cfg.dc")      // deterministic evaluation
 ctx.rollDice("8d8", flavorKey)  // chat-visible roll
 ctx.openPrompt(promptId)        // run a declared prompt now
@@ -123,7 +129,7 @@ Plugins may import **only** from the public API entry (`hero-engine/src/api`
 for built-ins; external plugins just use the global API object + the published
 types). The build fails if a built-in reaches into engine internals.
 
-## Coverage matrix — Dorian & Thar'gunn (fast-follow plugins)
+## Coverage matrix — Dorian and Thar’gunn
 
 Verified capability mapping for the two remaining documented mechanics. ✅ =
 expressible today, 🔧 = expressible via `hooks`, ❗ = named follow-up gap.
@@ -143,14 +149,14 @@ expressible today, 🔧 = expressible via `hooks`, ❗ = named follow-up gap.
 | Pulso da Hearthstone (choice each turn) | ✅ `turn-start` trigger + choice `PromptDef` |
 | Final choice (banimento/milagre/santuário) + Preço Épico (fixed + d4) | ✅ `TransformDef.onExpire` + prompt + table |
 
-### Thar'gunn — Ladrão da Décima Vida
+### Thar’gunn — Ladrão da Décima Vida (built in)
 
 | Doc element | API primitive |
 |---|---|
 | Weapon level 1–5, slots and charges per level | ✅ tracker + `derived` |
 | Cargas recharge at dawn only if the weapon "tasted blood" | ✅ `dawn` rule + `conditionKey` |
 | Sifão de Essência on nat-20 or kill | ✅ `crit-dealt` / `reduced-to-zero` triggers + save prompt |
-| **Eco Oco storage: a dynamic list of stolen abilities with per-eco costs/erasure** | ❗ follow-up: *stolen-ability registry* primitive (dynamic action lists). Interim: state flags + `postCard` via hooks |
+| Eco Oco storage: dynamic stolen abilities with per-Echo costs/erasure | ✅ `recordCollections`, linked managed dnd5e activities, pending replacement and lifecycle cleanup |
 | Marcas de Fome ladder 3/5/7/10 | ✅ tracker thresholds |
 | Dano na Alma per Eco use (2d10–8d10) | 🔧 `hooks.onActionUse` + `ctx.rollDice` |
 | Dívida de Essência (-10 max HP each) | 🔧 tracker + hook-applied Active Effect |
@@ -159,5 +165,6 @@ expressible today, 🔧 = expressible via `hooks`, ❗ = named follow-up gap.
 | Ultimate: 5 rounds, Legendary Points 3/turn | ✅ `TransformDef`; LP = resource + `turn-start` set-to-3 trigger |
 | Fraturas de Nome + end damage `12d12 + 2d12/fratura` | ✅ tracker; 🔧 `onTransformExpire` roll with formula |
 
-**Named follow-up gap:** the *stolen-ability registry* (Thar'gunn's Eco Oco
-slots) is the one primitive v1 lacks — tracked as a future openspec change.
+Thar’gunn is also the reference implementation for secure target requests,
+managed content reconciliation, actor-swap canonical state, and record-linked
+dnd5e activities. Plugin code still imports only the public API contract.

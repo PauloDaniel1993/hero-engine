@@ -12,6 +12,10 @@ Ships with reference mechanics:
   Storm Charges, four stances, the Heroic Oath, the Storm's Weight curse.
 - **Deimos — O Limiar do Confessor** — the Book of Vile Darkness: Influence
   Points, the Berserker, and the two-outcome Ultimate with its debts.
+- **Thar’gunn — Ladrão da Décima Vida** — a complete character addon with
+  weapon milestones, Hollow Echo capture/storage, Hunger and Essence Debt,
+  Recorded Legends and rite, Skeldr, the moving Tenth March field, and a
+  native level-20 Ultimate form.
 - **Flaming Sword (example)** — the commented template for your own plugins.
 
 ## Requirements
@@ -46,6 +50,29 @@ in an untracked `.env`. Enable **Hero Engine** in your world afterwards.
    configuration*; per-actor overrides via each attachment's *Overrides*
    button. Formula fields accept things like `12 + @pi` with live preview.
 
+## Installing Thar’gunn
+
+The release ships reproducible Actor, Item, and Macro compendia, but the
+managed installer deliberately requires proof of a backup before touching a
+world actor.
+
+1. Back up the world and the two actors.
+2. As GM, set **Settings → Configure Settings → Hero Engine → Verified backup
+   evidence** to the backup path, snapshot ID, or checksum record.
+3. Inspect the non-mutating plan with
+   `await game.modules.get("hero-engine").api.previewThargunnInstall()`.
+4. Apply it with
+   `await game.modules.get("hero-engine").api.installThargunn()`.
+
+The installer adopts the recorded Thar’gunn actors and Nine Lives Stealer,
+creates/repairs Skeldr, managed activities and macros, attaches fresh mechanic
+state, and reports DDB subclass collisions without deleting unrelated content.
+Running it again repairs managed fields while preserving biography, inventory,
+ownership, attunement, current HP percentage, and canonical state.
+
+Rollback is actor/world restore from the recorded backup. Removing the module
+alone does not delete managed world documents.
+
 ## Writing your own mechanics
 
 See **PLUGIN-GUIDE.md** and copy `src/plugins/example-flaming-sword/`.
@@ -56,6 +83,7 @@ Typed contract: `types/types.d.ts`.
 ```bash
 npm test          # vitest — pure engine core (formulas, trackers, config, timing, validation)
 npm run check     # typecheck + plugin import guard
+npm run build     # compendia + production bundle + declarations + bundle audit
 ```
 
 Verification in a live world: `docs/SMOKE-TEST.md`.
