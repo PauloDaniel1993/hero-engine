@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.11 — 2026-07-11
+
+- Bound the GM Control Panel to the viewport and add a visible vertical scroll
+  area for long attachment and configuration lists.
+- Keep the Hero Engine summary header visible while the dashboard scrolls.
+
 ## 1.0.10 — 2026-07-11
 
 - Apply Ultimate expiry damage and persistent consequence effects to canonical
