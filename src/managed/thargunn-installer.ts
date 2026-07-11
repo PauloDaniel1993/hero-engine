@@ -263,6 +263,14 @@ export function initThargunnManagedHooks(): void {
   Hooks.on("dnd5e.useActivity", async (activity: any) => {
     const item = activity?.item;
     const actor = item?.actor;
+    const isRage = /^(rage|fúria)$/i.test(String(item?.system?.identifier ?? item?.name ?? ""));
+    if (actor && isRage) {
+      const rageCtx = contextFor(actor, "thargunn-mythic");
+      if (rageCtx) {
+        await rageCtx.state.setFlag("rageExpiresAtRealTime", Date.now() + 600_000);
+        await rageCtx.state.setFlag("rageExpiresAtWorldTime", Number(game.time?.worldTime ?? 0) + 600);
+      }
+    }
     const actionId = item?.getFlag?.(MODULE_ID, "actionId");
     const recordId = item?.getFlag?.(MODULE_ID, "managed")?.recordId;
     const collectionId = item?.getFlag?.(MODULE_ID, "collectionId");

@@ -19,8 +19,23 @@ function echoIcon(category: string): string {
       : "trait";
   return `modules/hero-engine/assets/thargunn/icons/echo-${direct}.webp`;
 }
-function isRaging(actor: any): boolean {
-  return actor.statuses?.has?.("rage") || actor.effects?.some?.((effect: any) => effect.statuses?.has?.("rage") || /rage|fúria/i.test(effect.name));
+function rageItemIds(actor: any): Set<string> {
+  return new Set([...(actor.items ?? [])].filter((item: any) => /^(rage|fúria)$/i.test(String(item.system?.identifier ?? item.name ?? ""))).map((item: any) => item.id));
+}
+
+export function isRaging(actor: any, ctx?: MechanicContext, now = Date.now()): boolean {
+  if (actor.statuses?.has?.("rage") || actor.statuses?.has?.("raging")) return true;
+  if (actor.effects?.some?.((effect: any) => !effect.disabled && !effect.isSuppressed && (effect.statuses?.has?.("rage") || effect.statuses?.has?.("raging") || /rage|raging|fúria|furioso/i.test(effect.name)))) return true;
+  const realExpiry = Number(ctx?.state.getFlag<number>("rageExpiresAtRealTime") ?? 0);
+  const worldExpiry = Number(ctx?.state.getFlag<number>("rageExpiresAtWorldTime") ?? 0);
+  if (realExpiry >= now || worldExpiry > Number(game.time?.worldTime ?? 0)) return true;
+  const ids = rageItemIds(actor);
+  return [...(game.messages?.contents ?? [])].slice(-100).some((message: any) => {
+    if (message.speaker?.actor !== actor.id || now - Number(message.timestamp ?? 0) > 600_000) return false;
+    const itemId = message.flags?.dnd5e?.item?.id;
+    const activityUuid = String(message.flags?.dnd5e?.activity?.uuid ?? "");
+    return ids.has(itemId) || [...ids].some((id) => activityUuid.includes(`.Item.${id}.`));
+  });
 }
 
 async function adjustHunger(ctx: MechanicContext, amount: number): Promise<void> {
@@ -93,14 +108,58 @@ async function consumeOpportunity(ctx: MechanicContext, opportunityId?: string):
   return opportunity;
 }
 
+function safeHtml(value: unknown): string {
+  return String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]!);
+}
+
+let echoPickerBound = false;
+function ensureEchoPickerBindings(): void {
+  if (echoPickerBound || typeof document === "undefined") return;
+  echoPickerBound = true;
+  const filter = (root: HTMLElement) => {
+    const search = root.querySelector<HTMLInputElement>("[data-he-echo-search]")?.value.trim().toLocaleLowerCase() ?? "";
+    const category = root.querySelector<HTMLSelectElement>("[data-he-echo-category]")?.value ?? "all";
+    let visible = 0;
+    root.querySelectorAll<HTMLElement>("[data-he-echo-card]").forEach((card) => {
+      const show = (!search || (card.dataset["search"] ?? "").includes(search)) && (category === "all" || card.dataset["category"] === category);
+      card.hidden = !show;
+      if (show) visible += 1;
+    });
+    const empty = root.querySelector<HTMLElement>("[data-he-echo-empty]");
+    if (empty) empty.hidden = visible > 0;
+    const count = root.querySelector<HTMLElement>("[data-he-echo-count]");
+    if (count) count.textContent = String(visible);
+  };
+  document.addEventListener("input", (event) => {
+    const root = (event.target as HTMLElement)?.closest<HTMLElement>("[data-he-echo-picker]");
+    if (root) filter(root);
+  });
+  document.addEventListener("change", (event) => {
+    const root = (event.target as HTMLElement)?.closest<HTMLElement>("[data-he-echo-picker]");
+    if (root) filter(root);
+  });
+}
+
 async function chooseFeature(features: EligibleFeature[]): Promise<EligibleFeature | null> {
   if (!features.length) return null;
   const DialogV2 = (globalThis as any).foundry?.applications?.api?.DialogV2;
   if (!DialogV2) return features[0]!;
+  ensureEchoPickerBindings();
+  const categories = [...new Set(features.map((feature) => feature.category))].sort();
+  const content = `<form class="hero-engine-echo-picker" data-he-echo-picker>
+    <header class="he-echo-picker-intro"><span><i class="fa-solid fa-mask"></i></span><div><strong>${safeHtml(game.i18n.localize(`${P}.Siphon.PickTitle`))}</strong><p>${safeHtml(game.i18n.localize(`${P}.Siphon.PickHint`))}</p></div><b><span data-he-echo-count>${features.length}</span> ${safeHtml(game.i18n.localize(`${P}.Siphon.Available`))}</b></header>
+    <div class="he-echo-picker-tools"><label><i class="fa-solid fa-magnifying-glass"></i><input type="search" data-he-echo-search placeholder="${safeHtml(game.i18n.localize(`${P}.Siphon.Search`))}" autocomplete="off" /></label>
+      <select data-he-echo-category aria-label="${safeHtml(game.i18n.localize(`${P}.Siphon.Filter`))}"><option value="all">${safeHtml(game.i18n.localize(`${P}.Siphon.AllCategories`))}</option>${categories.map((category) => `<option value="${safeHtml(category)}">${safeHtml(game.i18n.localize(`${P}.Categories.${category}`))}</option>`).join("")}</select></div>
+    <div class="he-echo-picker-grid">${features.map((feature, index) => `<label class="he-echo-choice" data-he-echo-card data-category="${safeHtml(feature.category)}" data-search="${safeHtml(`${feature.label} ${feature.category} ${feature.description}`.toLocaleLowerCase())}"><input type="radio" name="feature" value="${safeHtml(feature.opaqueId)}" ${index === 0 ? "checked" : ""}/><span class="he-echo-choice-mark"><i class="fa-solid fa-check"></i></span><span class="he-echo-choice-copy"><strong>${safeHtml(feature.label)}</strong><small>${safeHtml(game.i18n.localize(`${P}.Categories.${feature.category}`))}${feature.spellLevel ? ` · ${safeHtml(game.i18n.localize(`${P}.Siphon.SpellLevel`))} ${feature.spellLevel}` : ""}</small><em>${safeHtml(feature.description || game.i18n.localize(`${P}.Siphon.Redacted`))}</em></span></label>`).join("")}</div>
+    <div class="he-echo-picker-empty" data-he-echo-empty hidden><i class="fa-solid fa-magnifying-glass"></i><strong>${safeHtml(game.i18n.localize(`${P}.Siphon.NoMatches`))}</strong></div>
+  </form>`;
   const chosen = await DialogV2.wait({
-    window: { title: game.i18n.localize(`${P}.Siphon.PickTitle`) },
-    content: `<div class="hero-engine-thargunn-picker"><p>${game.i18n.localize(`${P}.Siphon.PickHint`)}</p></div>`,
-    buttons: features.map((feature, index) => ({ action: feature.opaqueId, label: `${feature.label} · ${feature.category}`, default: index === 0 })),
+    window: { title: game.i18n.localize(`${P}.Siphon.PickTitle`), classes: ["hero-engine-dialog", "he-echo-picker-dialog"] },
+    position: { width: 780, height: "auto" }, content,
+    buttons: [
+      { action: "cancel", label: game.i18n.localize("HEROENGINE.Config.Cancel"), icon: "fa-solid fa-xmark", callback: () => null },
+      { action: "select", label: game.i18n.localize(`${P}.Siphon.Select`), icon: "fa-solid fa-mask", default: true, callback: (_event: unknown, button: any) => button.form?.elements?.feature?.value ?? null },
+    ],
     rejectClose: false,
   });
   return features.find((feature) => feature.opaqueId === chosen) ?? null;
@@ -317,7 +376,7 @@ async function activateUltimate(ctx: MechanicContext): Promise<void> {
   const actor = actorOf(ctx);
   const item = weapon(ctx);
   const failures = canUseUltimate({
-    raging: isRaging(actor) || ctx.state.getFlag<boolean>("overrideRage") === true,
+    raging: isRaging(actor, ctx) || ctx.state.getFlag<boolean>("overrideRage") === true,
     skeldrPresent: ctx.state.getFlag<boolean>("skeldrPresent") !== false,
     attuned: item?.system?.attuned === true || ctx.state.getFlag<boolean>("overrideAttunement") === true,
     ultimateReady: ctx.state.getFlag<boolean>("ultimateReady") !== false,
@@ -441,6 +500,8 @@ const hooks = {
       await ctx.state.setFlag("ultimateReady", true);
       await ctx.state.setFlag("fieldLocked", false);
       await ctx.state.setFlag("deathSaveDisadvantage", false);
+      await ctx.state.setFlag("rageExpiresAtRealTime", 0);
+      await ctx.state.setFlag("rageExpiresAtWorldTime", 0);
       await removeManagedEffect(actorOf(ctx), "thargunn.effect.death-save-disadvantage");
       return;
     }

@@ -1,7 +1,9 @@
-import { describe, expect, it } from "vitest";
-import { eligibleFeatures } from "../src/plugins/thargunn";
+import { afterEach, describe, expect, it } from "vitest";
+import { eligibleFeatures, isRaging } from "../src/plugins/thargunn";
 
 describe("Thar’gunn eligible feature extraction", () => {
+  afterEach(() => { delete (globalThis as any).game; });
+
   it("normalizes items, activities, spells, class features, and actor traits", () => {
     const target = {
       items: [
@@ -27,5 +29,22 @@ describe("Thar’gunn eligible feature extraction", () => {
   it("caps hostile documents to a bounded picker", () => {
     const target = { items: Array.from({ length: 120 }, (_, index) => ({ id: `f${index}`, name: `Feature ${index}`, type: "feat", system: { description: { value: "x" }, activities: {} } })), system: { resources: {}, traits: {}, attributes: {} } };
     expect(eligibleFeatures(target)).toHaveLength(80);
+  });
+
+  it("recognizes dnd5e actor effects and recent DDB Rage activity cards", () => {
+    const actor: any = { id: "base", statuses: new Set(), effects: [], items: [{ id: "rage-item", name: "Rage", system: { identifier: "rage" } }] };
+    (globalThis as any).game = { time: { worldTime: 100 }, messages: { contents: [{ timestamp: 9_900, speaker: { actor: "base" }, flags: { dnd5e: { item: { id: "rage-item" } } } }] } };
+    expect(isRaging(actor, undefined, 10_000)).toBe(true);
+    (globalThis as any).game.messages.contents = [];
+    actor.effects = [{ name: "Raging", disabled: false, isSuppressed: false, statuses: new Set() }];
+    expect(isRaging(actor, undefined, 10_000)).toBe(true);
+  });
+
+  it("rejects stale Rage cards and accepts the bounded Hero Engine use anchor", () => {
+    const actor: any = { id: "base", statuses: new Set(), effects: [], items: [{ id: "rage-item", system: { identifier: "rage" } }] };
+    (globalThis as any).game = { time: { worldTime: 500 }, messages: { contents: [{ timestamp: 1, speaker: { actor: "base" }, flags: { dnd5e: { item: { id: "rage-item" } } } }] } };
+    expect(isRaging(actor, undefined, 700_002)).toBe(false);
+    const ctx: any = { state: { getFlag: (key: string) => key === "rageExpiresAtWorldTime" ? 501 : 0 } };
+    expect(isRaging(actor, ctx, 700_002)).toBe(true);
   });
 });
