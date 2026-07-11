@@ -8,6 +8,10 @@
 - Persist each region's open/closed state per client, actor, and mechanic.
 - Add consistent disclosure styling, compact closed summaries, counters, and
   keyboard-accessible native controls in English and pt-BR.
+- Replace the legacy one-button-per-feature Hollow Echo chooser with a
+  searchable, category-filtered responsive card picker.
+- Recognize Rage from dnd5e actor effects, recent DDB Rage activity cards, and
+  a bounded Hero Engine Rage-use anchor so Ultimate prerequisites match play.
 
 ## 1.0.1 — 2026-07-11
 
