@@ -34,3 +34,14 @@ Date: 2026-07-11 (Europe/Lisbon)
   final live pass. Earlier baseline T3 proof is retained; real-actor installer
   execution and destructive clone scenarios remain unchecked in OpenSpec and
   must not be represented as completed until the shared browser is re-paired.
+
+## Published readback
+
+- Draft PR: `https://github.com/PauloDaniel1993/hero-engine/pull/1` (25 atomic commits).
+- Release workflow: `https://github.com/PauloDaniel1993/hero-engine/actions/runs/29141886783` — success.
+- Published manifest SHA-256: `19a97b399f4f3f1132b41db44e57285f793beff8018bc20f24337e79759e6c65`.
+- Published archive SHA-256: `3ed4c9cb81b159650a39765634144fe59e1798bb7da09ffc022a59aad322d4ec`.
+- The downloaded manifest exactly matches repository `module.json` and reports
+  version 1.0.0, Foundry 13–14, verified 14, and the three managed packs.
+- The downloaded archive contains 36 files including the runtime bundle,
+  original Skeldr token, and all three LevelDB compendia.

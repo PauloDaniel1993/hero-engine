@@ -176,5 +176,5 @@
 - [x] 15.1 Update module version, compatibility metadata, changelog, README/plugin guide, and release notes with the new capabilities and migration warnings.
 - [x] 15.2 Confirm every quality gate and backup/rollback reference is recorded before publication.
 - [x] 15.3 Commit the intentional source, OpenSpec, tests, compendia, generated assets, and documentation changes without local backup or secret files.
-- [ ] 15.4 Push the repository branch and create the GitHub release with `module.json` and `hero-engine.zip` assets.
-- [ ] 15.5 Download and inspect the published manifest and archive, verify checksums/content/version, and confirm Foundry can discover the released version.
+- [x] 15.4 Push the repository branch and create the GitHub release with `module.json` and `hero-engine.zip` assets.
+- [x] 15.5 Download and inspect the published manifest and archive, verify checksums/content/version, and confirm Foundry can discover the released version.
