@@ -146,13 +146,13 @@ async function chooseFeature(features: EligibleFeature[]): Promise<EligibleFeatu
   if (!DialogV2) return features[0]!;
   ensureEchoPickerBindings();
   const categories = [...new Set(features.map((feature) => feature.category))].sort();
-  const content = `<form class="hero-engine-echo-picker" data-he-echo-picker>
+  const content = `<div class="hero-engine-echo-picker" data-he-echo-picker>
     <header class="he-echo-picker-intro"><span><i class="fa-solid fa-mask"></i></span><div><strong>${safeHtml(game.i18n.localize(`${P}.Siphon.PickTitle`))}</strong><p>${safeHtml(game.i18n.localize(`${P}.Siphon.PickHint`))}</p></div><b><span data-he-echo-count>${features.length}</span> ${safeHtml(game.i18n.localize(`${P}.Siphon.Available`))}</b></header>
     <div class="he-echo-picker-tools"><label><i class="fa-solid fa-magnifying-glass"></i><input type="search" data-he-echo-search placeholder="${safeHtml(game.i18n.localize(`${P}.Siphon.Search`))}" autocomplete="off" /></label>
       <select data-he-echo-category aria-label="${safeHtml(game.i18n.localize(`${P}.Siphon.Filter`))}"><option value="all">${safeHtml(game.i18n.localize(`${P}.Siphon.AllCategories`))}</option>${categories.map((category) => `<option value="${safeHtml(category)}">${safeHtml(game.i18n.localize(`${P}.Categories.${category}`))}</option>`).join("")}</select></div>
     <div class="he-echo-picker-grid">${features.map((feature, index) => `<label class="he-echo-choice" data-he-echo-card data-category="${safeHtml(feature.category)}" data-search="${safeHtml(`${feature.label} ${feature.category} ${feature.description}`.toLocaleLowerCase())}"><input type="radio" name="feature" value="${safeHtml(feature.opaqueId)}" ${index === 0 ? "checked" : ""}/><span class="he-echo-choice-mark"><i class="fa-solid fa-check"></i></span><span class="he-echo-choice-copy"><strong>${safeHtml(feature.label)}</strong><small>${safeHtml(game.i18n.localize(`${P}.Categories.${feature.category}`))}${feature.spellLevel ? ` · ${safeHtml(game.i18n.localize(`${P}.Siphon.SpellLevel`))} ${feature.spellLevel}` : ""}</small><em>${safeHtml(feature.description || game.i18n.localize(`${P}.Siphon.Redacted`))}</em></span></label>`).join("")}</div>
     <div class="he-echo-picker-empty" data-he-echo-empty hidden><i class="fa-solid fa-magnifying-glass"></i><strong>${safeHtml(game.i18n.localize(`${P}.Siphon.NoMatches`))}</strong></div>
-  </form>`;
+  </div>`;
   const chosen = await DialogV2.wait({
     window: { title: game.i18n.localize(`${P}.Siphon.PickTitle`), classes: ["hero-engine-dialog", "he-echo-picker-dialog"] },
     position: { width: 780, height: "auto" }, content,
