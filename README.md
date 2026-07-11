@@ -77,6 +77,8 @@ alone does not delete managed world documents.
 
 See **PLUGIN-GUIDE.md** and copy `src/plugins/example-flaming-sword/`.
 Typed contract: `types/types.d.ts`.
+For the complete UI, state, security, managed-content, testing, and release
+contract, see the [add-on development handbook](docs/ADDON-DEVELOPMENT.md).
 
 ## Development
 
