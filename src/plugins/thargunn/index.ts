@@ -669,8 +669,8 @@ const hooks = {
     await syncHunger(ctx);
   },
   async onRecordsReady(ctx: MechanicContext) {
-    await reconcileEchoProjections(ctx);
     await recoverPendingUltimateApproval(ctx);
+    await reconcileEchoProjections(ctx);
   },
   async onTrigger(ctx: MechanicContext, trigger: TriggerDef, payload: TriggerPayload) {
     if (trigger.id === "long-rest") {
