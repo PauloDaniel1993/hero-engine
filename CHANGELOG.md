@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.7 — 2026-07-11
+
+- Carry Rage into the Ultimate actor swap through a managed form effect,
+  including Rage damage, physical resistance, Strength advantage, and the
+  visible Rage status without consuming a second Rage use.
+- Correct the Ultimate weapon from the ranged-distance field to dnd5e 5.3's
+  melee `range.reach` field and set its reach to 10 feet.
+- Bump the managed template version so rerunning the installer repairs existing
+  Ultimate actors and their weapon copies deterministically.
+
 ## 1.0.6 — 2026-07-11
 
 - Route player-triggered Ultimate transformations through the persistent GM

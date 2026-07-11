@@ -1,6 +1,6 @@
 {
   "name": "hero-engine",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "private": true,
   "type": "module",
   "description": "Foundry VTT plugin engine for bespoke epic character/weapon mechanics (dnd5e)",
