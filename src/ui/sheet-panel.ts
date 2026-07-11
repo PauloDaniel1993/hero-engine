@@ -72,7 +72,6 @@ export function openActorMechanics(actor: any): any {
     return current;
   }
   let refreshTimer: ReturnType<typeof setTimeout> | null = null;
-  const openTriggerPlugins = new Set<string>();
   const scheduleRefresh = () => {
     if (refreshTimer) clearTimeout(refreshTimer);
     refreshTimer = setTimeout(() => app.render(), 650);
@@ -92,15 +91,6 @@ export function openActorMechanics(actor: any): any {
     render: () => `<div class="hero-engine-actor-window">${renderPanel(actor, resolveAttachments(actor))}</div>`,
     bind: (root) => {
       bindPanel(root, actor);
-      root.querySelectorAll<HTMLDetailsElement>("details.he-triggers").forEach((details) => {
-        const pluginId = details.closest<HTMLElement>(".he-mechanic")?.dataset["plugin"];
-        if (pluginId && openTriggerPlugins.has(pluginId)) details.open = true;
-        details.addEventListener("toggle", () => {
-          if (!pluginId) return;
-          if (details.open) openTriggerPlugins.add(pluginId);
-          else openTriggerPlugins.delete(pluginId);
-        });
-      });
       root.addEventListener("click", (event) => {
         if ((event.target as HTMLElement).closest("button[data-he]")) scheduleRefresh();
       });
@@ -137,9 +127,9 @@ function renderMechanic(att: Attachment, plugin: MechanicPlugin, state: Instance
   const data = safeEvalData(att, plugin, state);
   const dis = editable ? "" : "disabled";
   const parts: string[] = [];
-
-  parts.push(`<header class="he-mechanic-header"><div><h3>${escapeHtml(localize(plugin.nameKey))}</h3>
-    <p>${escapeHtml(plugin.descriptionKey ? localize(plugin.descriptionKey) : "")}</p></div><span>${escapeHtml(plugin.archetype)}</span></header>`);
+  const characterRows: string[] = [];
+  const stateRows: string[] = [];
+  const regionKey = (regionId: string) => regionStorageKey(att.canonicalActor.id, plugin.id, regionId);
 
   // Trackers with threshold badges and GM +/- controls.
   for (const t of plugin.trackers ?? []) {
@@ -153,7 +143,7 @@ function renderMechanic(att: Attachment, plugin: MechanicPlugin, state: Instance
       ? `<button type="button" class="he-step" data-he="adjust" data-plugin="${plugin.id}" data-id="${t.id}" data-delta="-${t.step ?? 1}"><i class="fa-solid fa-minus"></i></button>
          <button type="button" class="he-step" data-he="adjust" data-plugin="${plugin.id}" data-id="${t.id}" data-delta="${t.step ?? 1}"><i class="fa-solid fa-plus"></i></button>`
       : "";
-    parts.push(
+    characterRows.push(
       `<div class="he-row he-tracker"><div class="he-row-main"><label>${escapeHtml(localize(t.labelKey))}${badges}</label>
         <span class="he-value">${value}${max !== null ? ` / ${max}` : ""}</span>${gmButtons}</div>
         ${pct !== null ? `<span class="he-meter"><i style="width:${pct}%"></i></span>` : ""}</div>`
@@ -169,7 +159,7 @@ function renderMechanic(att: Attachment, plugin: MechanicPlugin, state: Instance
       ? `<button type="button" class="he-step" data-he="adjust" data-plugin="${plugin.id}" data-id="${r.id}" data-delta="-1"><i class="fa-solid fa-minus"></i></button>
          <button type="button" class="he-step" data-he="adjust" data-plugin="${plugin.id}" data-id="${r.id}" data-delta="1"><i class="fa-solid fa-plus"></i></button>`
       : "";
-    parts.push(
+    characterRows.push(
       `<div class="he-row he-resource"><div class="he-row-main"><label>${escapeHtml(localize(r.labelKey))}</label>
         <span class="he-value">${value} / ${max}</span>${gmButtons}</div>
         ${pct !== null ? `<span class="he-meter"><i style="width:${pct}%"></i></span>` : ""}</div>`
@@ -213,19 +203,19 @@ function renderMechanic(att: Attachment, plugin: MechanicPlugin, state: Instance
           <button type="button" data-he="pending-replace" data-plugin="${plugin.id}" data-collection="${collection.id}" data-pending="${entry.id}">${escapeHtml(localize("HEROENGINE.Records.Replace"))}</button>
           <button type="button" data-he="pending-cancel" data-plugin="${plugin.id}" data-collection="${collection.id}" data-pending="${entry.id}">${escapeHtml(localize("HEROENGINE.Records.Cancel"))}</button></footer></article>`;
     }).join("");
-    parts.push(`<section class="he-record-collection" data-he-collection="${collection.id}" data-presentation-key="${escapeHtml(presentationKey)}">
-      <header class="he-record-heading"><div><i class="fa-solid fa-layer-group"></i><span><strong>${escapeHtml(localize(collection.labelKey))}</strong>
-        <small>${collection.descriptionKey ? escapeHtml(localize(collection.descriptionKey)) : ""}</small></span></div><b>${snapshot.slots.filter((slot) => slot.record).length}/${snapshot.capacity}</b></header>
-      <div class="he-record-tools"><label><i class="fa-solid fa-magnifying-glass"></i><input type="search" data-he-record-search value="${escapeHtml(presentation.search ?? "")}" placeholder="${escapeHtml(localize("HEROENGINE.Records.Search"))}" /></label>
+    parts.push(`<details class="he-region he-record-collection" data-he-collection="${collection.id}" data-presentation-key="${escapeHtml(presentationKey)}" ${regionAttributes(regionKey(`collection:${collection.id}`), true)}>
+      <summary class="he-region-summary he-record-heading"><div><i class="fa-solid fa-layer-group"></i><span><strong>${escapeHtml(localize(collection.labelKey))}</strong>
+        <small>${collection.descriptionKey ? escapeHtml(localize(collection.descriptionKey)) : ""}</small></span></div><span class="he-region-meta"><b>${snapshot.slots.filter((slot) => slot.record).length}/${snapshot.capacity}</b><i class="fa-solid fa-chevron-down he-region-chevron"></i></span></summary>
+      <div class="he-region-content"><div class="he-record-tools"><label><i class="fa-solid fa-magnifying-glass"></i><input type="search" data-he-record-search value="${escapeHtml(presentation.search ?? "")}" placeholder="${escapeHtml(localize("HEROENGINE.Records.Search"))}" /></label>
         <select data-he-record-filter><option value="all" ${!presentation.filter || presentation.filter === "all" ? "selected" : ""}>${localize("HEROENGINE.Records.All")}</option><option value="permanent" ${presentation.filter === "permanent" ? "selected" : ""}>${localize("HEROENGINE.Records.Permanent")}</option><option value="temporary" ${presentation.filter === "temporary" ? "selected" : ""}>${localize("HEROENGINE.Records.Temporary")}</option><option value="blocked" ${presentation.filter === "blocked" ? "selected" : ""}>${localize("HEROENGINE.Records.Blocked")}</option><option value="pending" ${presentation.filter === "pending" ? "selected" : ""}>${localize("HEROENGINE.Records.Pending")}</option><option value="empty" ${presentation.filter === "empty" ? "selected" : ""}>${localize("HEROENGINE.Records.Empty")}</option></select></div>
       ${snapshot.recovery ? `<p class="he-record-recovery"><i class="fa-solid fa-triangle-exclamation"></i>${escapeHtml(snapshot.recovery)}</p>` : ""}
-      <div class="he-record-list">${pendingRows}${rows}</div></section>`);
+      <div class="he-record-list">${pendingRows}${rows}</div></div></details>`);
   }
 
   // Active transformation countdown.
   if (state.transform) {
     const def = plugin.transformations?.find((t) => t.id === state.transform!.id);
-    parts.push(
+    stateRows.push(
       `<div class="he-row he-transform"><div class="he-row-main"><label><i class="fa-solid fa-wand-sparkles"></i>${escapeHtml(localize("HEROENGINE.Panel.Transform"))}</label>
         <span class="he-value">${escapeHtml(def ? localize(def.labelKey) : state.transform.id)} — ${localize(
           "HEROENGINE.Panel.RoundsLeft",
@@ -244,7 +234,7 @@ function renderMechanic(att: Attachment, plugin: MechanicPlugin, state: Instance
           `<option value="${s.id}" ${s.id === current ? "selected" : ""}>${escapeHtml(localize(s.labelKey))}</option>`
       ),
     ].join("");
-    parts.push(
+    stateRows.push(
       `<div class="he-row he-stance"><div class="he-row-main"><label><i class="fa-solid fa-person-rays"></i>${escapeHtml(localize(g.labelKey))}</label>
         <select data-he="stance" data-plugin="${plugin.id}" data-id="${g.id}" ${dis}>${options}</select></div></div>`
     );
@@ -265,7 +255,7 @@ function renderMechanic(att: Attachment, plugin: MechanicPlugin, state: Instance
         ${escapeHtml(localize(a.labelKey))}${costText ? ` [${costText}]` : ""}${cdText}</button>`;
     })
     .join("");
-  if (actionButtons) parts.push(`<section class="he-action-block"><header><i class="fa-solid fa-bolt"></i><span>${escapeHtml(localize("HEROENGINE.Panel.Actions"))}</span></header><div class="he-actions">${actionButtons}</div></section>`);
+  if (actionButtons) parts.push(`<details class="he-region he-action-block" ${regionAttributes(regionKey("actions"), true)}><summary class="he-region-summary"><i class="fa-solid fa-bolt"></i><span>${escapeHtml(localize("HEROENGINE.Panel.Actions"))}</span><i class="fa-solid fa-chevron-down he-region-chevron"></i></summary><div class="he-region-content he-actions">${actionButtons}</div></details>`);
 
   // Manual trigger fallbacks.
   const triggerButtons = (plugin.triggers ?? [])
@@ -278,17 +268,45 @@ function renderMechanic(att: Attachment, plugin: MechanicPlugin, state: Instance
     .join("");
   if (triggerButtons) {
     parts.push(
-      `<details class="he-triggers"><summary><i class="fa-solid fa-hand"></i>${localize("HEROENGINE.Panel.ManualTriggers")}<i class="fa-solid fa-chevron-down"></i></summary><div class="he-trigger-grid">${triggerButtons}</div></details>`
+      `<details class="he-region he-triggers" ${regionAttributes(regionKey("manual-triggers"), false)}><summary class="he-region-summary"><i class="fa-solid fa-hand"></i><span>${localize("HEROENGINE.Panel.ManualTriggers")}</span><i class="fa-solid fa-chevron-down he-region-chevron"></i></summary><div class="he-region-content he-trigger-grid">${triggerButtons}</div></details>`
     );
   }
 
-  return `<div class="he-mechanic" data-plugin="${plugin.id}">${parts.join("")}</div>`;
+  if (stateRows.length) parts.unshift(`<details class="he-region he-state-region" ${regionAttributes(regionKey("active-state"), true)}><summary class="he-region-summary"><i class="fa-solid fa-wand-sparkles"></i><span>${escapeHtml(localize("HEROENGINE.Panel.ActiveState"))}</span><i class="fa-solid fa-chevron-down he-region-chevron"></i></summary><div class="he-region-content">${stateRows.join("")}</div></details>`);
+  if (characterRows.length) parts.unshift(`<details class="he-region he-character-region" ${regionAttributes(regionKey("character"), true)}><summary class="he-region-summary"><i class="fa-solid fa-chart-simple"></i><span>${escapeHtml(localize("HEROENGINE.Panel.Character"))}</span><i class="fa-solid fa-chevron-down he-region-chevron"></i></summary><div class="he-region-content">${characterRows.join("")}</div></details>`);
+
+  return `<details class="he-mechanic" data-plugin="${plugin.id}" ${regionAttributes(regionKey("mechanic"), true)}><summary class="he-mechanic-header"><div><h3>${escapeHtml(localize(plugin.nameKey))}</h3>
+    <p>${escapeHtml(plugin.descriptionKey ? localize(plugin.descriptionKey) : "")}</p></div><span>${escapeHtml(plugin.archetype)}</span><i class="fa-solid fa-chevron-down he-region-chevron"></i></summary><div class="he-mechanic-content">${parts.join("")}</div></details>`;
+}
+
+export function regionStorageKey(actorId: string, pluginId: string, regionId: string): string {
+  return `hero-engine:region-ui:${actorId}:${pluginId}:${regionId}`;
+}
+
+export function storedRegionOpen(stored: string | null, defaultOpen: boolean): boolean {
+  return stored === null ? defaultOpen : stored === "open";
+}
+
+function regionAttributes(key: string, defaultOpen: boolean): string {
+  let open = defaultOpen;
+  try {
+    open = storedRegionOpen(localStorage.getItem(key), defaultOpen);
+  } catch { /* localStorage can be unavailable in isolated render fixtures. */ }
+  return `data-he-region-key="${escapeHtml(key)}"${open ? " open" : ""}`;
 }
 
 function bindPanel(root: HTMLElement, actor: any): void {
   const panel = root.querySelector<HTMLElement>(".hero-engine-panel");
   if (!panel || panel.dataset["heBound"]) return;
   panel.dataset["heBound"] = "1";
+
+  panel.querySelectorAll<HTMLDetailsElement>("details[data-he-region-key]").forEach((details) => {
+    details.addEventListener("toggle", () => {
+      const key = details.dataset["heRegionKey"];
+      if (!key) return;
+      try { localStorage.setItem(key, details.open ? "open" : "closed"); } catch { /* client presentation remains best-effort. */ }
+    });
+  });
 
   const applyCollectionFilter = (collection: HTMLElement) => {
     const query = collection.querySelector<HTMLInputElement>("[data-he-record-search]")?.value.trim().toLocaleLowerCase() ?? "";

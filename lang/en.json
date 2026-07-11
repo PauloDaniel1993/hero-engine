@@ -79,6 +79,8 @@
       "Subtitle": "Epic powers, resources and active states",
       "Transform": "Active form",
       "RoundsLeft": "{rounds} round(s) left",
+      "Character": "Character",
+      "ActiveState": "Active states",
       "Actions": "Actions",
       "ManualTriggers": "Manual triggers"
     },

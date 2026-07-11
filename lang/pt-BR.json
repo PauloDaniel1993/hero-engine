@@ -79,6 +79,8 @@
       "Subtitle": "Poderes épicos, recursos e estados ativos",
       "Transform": "Forma ativa",
       "RoundsLeft": "{rounds} rodada(s) restante(s)",
+      "Character": "Personagem",
+      "ActiveState": "Estados ativos",
       "Actions": "Ações",
       "ManualTriggers": "Gatilhos manuais"
     },
