@@ -18,6 +18,7 @@ import { buildRecordRenderModel } from "./record-model";
 import { ensureAttachmentReady } from "../engine/records";
 import { MECHANIC_SETTLED_HOOK, type MechanicSettlement } from "../engine/events";
 import { canonicalActor } from "../engine/state";
+import { actionGateReasons, bindActionTooltips, formatActionGateReason, hideActionTooltip, type ResolvedActionCost } from "./action-tooltip";
 
 export function registerSheetPanel(): void {
   const inject = (app: any, element: HTMLElement | any) => {
@@ -124,6 +125,7 @@ export function openActorMechanics(actor: any): any {
     },
     onClose: () => {
       closed = true;
+      hideActionTooltip();
       if (refreshTimer) clearTimeout(refreshTimer);
       for (const registration of hookRegistrations) Hooks.off(registration.event, registration.id);
       actorMechanicsApps.delete(actor.id);
@@ -303,18 +305,31 @@ function renderMechanic(att: Attachment, plugin: MechanicPlugin, state: Instance
     .filter((a) => !a.gmOnly || game.user.isGM)
     .map((a) => {
       const cd = cooldownStatus(att, plugin, a);
-      const meetsFlags = (!a.requiresFlag || Boolean(state.flags[a.requiresFlag]))
-        && (!a.forbidsFlag || !state.flags[a.forbidsFlag]);
-      const costText = (a.costs ?? [])
-        .map((c) => `${safeNum(c.amount, data)} ${escapeHtml(localize(plugin.resources?.find((r) => r.id === c.resource)?.labelKey ?? c.resource))}`)
+      const costs: ResolvedActionCost[] = (a.costs ?? []).map((cost) => {
+        const amount = safeNum(cost.amount, data);
+        return {
+          resource: cost.resource,
+          label: localize(plugin.resources?.find((resource) => resource.id === cost.resource)?.labelKey ?? cost.resource),
+          amount: typeof amount === "number" ? amount : Number.NaN,
+        };
+      });
+      const costText = costs
+        .map((cost) => `${Number.isFinite(cost.amount) ? cost.amount : "?"} ${cost.label}`)
         .join(", ");
-      const disabled = !editable || !cd.ready || !meetsFlags ? "disabled" : "";
+      const reasons = actionGateReasons(a, state, editable, cd, costs).map(formatActionGateReason);
+      const unavailable = reasons.length > 0;
+      const disabled = unavailable ? "disabled" : "";
       const cdText = cd.ready ? "" : ` (${escapeHtml(cd.remainingText ?? "")})`;
-      const titleText = !meetsFlags ? localize("HEROENGINE.Errors.Unavailable")
-        : a.descriptionKey ? localize(a.descriptionKey) : "";
-      const title = titleText ? ` title="${escapeHtml(titleText)}"` : "";
-      return `<button type="button" data-he="action" data-plugin="${plugin.id}" data-id="${a.id}" ${disabled}${title}>
-        ${escapeHtml(localize(a.labelKey))}${costText ? ` [${costText}]` : ""}${cdText}</button>`;
+      const label = localize(a.labelKey);
+      const description = a.descriptionKey ? localize(a.descriptionKey)
+        : localize("HEROENGINE.ActionTooltip.NoDescription", { action: label });
+      const tooltipCost = costText || localize("HEROENGINE.ActionTooltip.NoCost");
+      return `<span class="he-action-help ${unavailable ? "is-unavailable" : "is-available"}" data-he-action-help
+          data-he-tooltip-title="${escapeHtml(label)}" data-he-tooltip-description="${escapeHtml(description)}"
+          data-he-tooltip-cost="${escapeHtml(tooltipCost)}" data-he-tooltip-available="${unavailable ? "false" : "true"}"
+          data-he-tooltip-reasons="${escapeHtml(JSON.stringify(reasons))}" ${unavailable ? "tabindex=\"0\"" : ""}>
+        <button type="button" data-he="action" data-plugin="${plugin.id}" data-id="${a.id}" ${disabled} aria-label="${escapeHtml(label)}">
+          ${escapeHtml(label)}${costText ? ` [${escapeHtml(costText)}]` : ""}${cdText}</button></span>`;
     })
     .join("");
   if (actionButtons) parts.push(`<details class="he-region he-action-block" ${regionAttributes(regionKey("actions"), true)}><summary class="he-region-summary"><i class="fa-solid fa-bolt"></i><span>${escapeHtml(localize("HEROENGINE.Panel.Actions"))}</span><i class="fa-solid fa-chevron-down he-region-chevron"></i></summary><div class="he-region-content he-actions">${actionButtons}</div></details>`);
@@ -361,6 +376,7 @@ function bindPanel(root: HTMLElement, actor: any, onMutation: () => void): void 
   const panel = root.querySelector<HTMLElement>(".hero-engine-panel");
   if (!panel || panel.dataset["heBound"]) return;
   panel.dataset["heBound"] = "1";
+  bindActionTooltips(panel);
 
   panel.querySelectorAll<HTMLDetailsElement>("details[data-he-region-key]").forEach((details) => {
     details.addEventListener("toggle", () => {

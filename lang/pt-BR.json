@@ -34,10 +34,23 @@
       "Confirm": "Confirmar",
       "Apply": "Aplicar alteração"
     },
+    "ActionTooltip": {
+      "Action": "Ação do Hero Engine",
+      "Available": "Disponível",
+      "Unavailable": "Indisponível",
+      "Cost": "Custo",
+      "NoCost": "Sem custo de recurso",
+      "WhyUnavailable": "Por que está indisponível",
+      "Ready": "Pronta para usar",
+      "HoverHint": "Exibido após manter o cursor por 500 ms",
+      "NoDescription": "Use {action} por esta mecânica."
+    },
     "Errors": {
       "GMOnly": "Apenas o Mestre pode fazer isso.",
       "NotOwner": "Você não é dono deste personagem.",
       "Unavailable": "Esta ação não está disponível agora.",
+      "RequiresState": "Um estado obrigatório da mecânica não está ativo.",
+      "ForbiddenState": "O estado atual da mecânica bloqueia esta ação.",
       "OnCooldown": "Em recarga ({remaining}).",
       "NotEnough": "{resource} insuficiente.",
       "AlreadyTransformed": "Já existe uma transformação ativa.",
@@ -177,6 +190,33 @@
         "Fractures": "Fraturas de Nome"
       },
       "Resources": { "Charges": "Cargas da Décima Vida", "LegendaryPoints": "Pontos Lendários" },
+      "ActionDescriptions": {
+        "Siphon": "Escolha uma criatura como alvo e tente roubar uma característica elegível como Eco Oco.",
+        "Field": "Gaste todas as Cargas da Décima Vida restantes para criar o Campo móvel até sua duração terminar.",
+        "FieldExit": "Resolva o teste de Força quando um inimigo tentar sair do Campo ativo.",
+        "Ultimate": "Solicite a Marcha da Décima Lenda. O pedido de um jogador aguarda aprovação do Mestre antes da troca de ator.",
+        "Rite": "Tente os três testes de CD 25 do Rito da Décima Lenda.",
+        "Purify": "Escolha uma consequência persistente de Fome, Dívida, espaço de Eco, Skeldr ou Fratura para reparar.",
+        "SkeldrMove": "Gaste 1 Ponto Lendário para Skeldr mover 60 pés e preparar Passo Trovejante após 20 pés.",
+        "MightyImpel": "Gaste 1 Ponto Lendário para usar Impulso Poderoso contra uma criatura Enorme ou menor.",
+        "DevastatingStrike": "Gaste 2 Pontos Lendários para realizar o ataque provisório de força e trovão.",
+        "LegendaryEcho": "Gaste 2 Pontos Lendários para manifestar um Eco Oco armazenado.",
+        "SecondSiphon": "Gaste 3 Pontos Lendários para tentar um segundo Sifão da Décima Vida neste turno.",
+        "SkeldrRescue": "Gaste 3 Pontos Lendários para Skeldr preservar um aliado caído com 1 PV.",
+        "HungerGuard": "Uma vez por descanso curto, Skeldr impede um ponto de Fome.",
+        "EarlyReturn": "Grave uma Lenda protetora para chamar um Skeldr ausente de volta mais cedo.",
+        "RecordLegend": "Grave o nome e o feito de uma Lenda mítica."
+      },
+      "Availability": {
+        "FieldInactive": "O Campo da Décima Marca precisa estar ativo.",
+        "UltimateRest": "A Ultimate já foi gasta; termine um descanso longo para restaurá-la.",
+        "ApprovalPending": "O pedido da Ultimate está aguardando a decisão do Mestre.",
+        "UltimateInactive": "A Marcha da Décima Lenda precisa estar ativa.",
+        "TakeoverLocked": "O Soberano Sem Nome controla o primeiro turno da Ultimate.",
+        "SkeldrAbsent": "Skeldr está ausente e não pode proteger Thar’gunn.",
+        "GuardSpent": "Skeldr já impediu Fome durante este descanso curto.",
+        "SkeldrPresent": "Skeldr já está presente; um retorno antecipado é desnecessário."
+      },
       "Hunger": {
         "T3": "O sussurro da arma",
         "T5": "Exigência predatória",

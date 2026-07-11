@@ -152,12 +152,56 @@ html[data-hero-engine-theme="storm"] #scene-controls [data-tool="hero-engine-gm"
 .hero-engine-panel .he-action-block > summary i:first-child { color: var(--he-sheet-accent); }
 .hero-engine-panel .he-actions,
 .hero-engine-panel .he-trigger-grid { display: flex; flex-wrap: wrap; gap: 0.4rem; padding: 0.55rem 0.65rem 0.65rem; }
+.hero-engine-panel .he-actions .he-action-help,
+.hero-engine-panel .he-trigger-grid button { flex: 1 1 calc(50% - 0.4rem); min-width: 0; }
+.hero-engine-panel .he-actions .he-action-help { display: flex; border-radius: 0.45rem; }
+.hero-engine-panel .he-actions .he-action-help.is-unavailable { cursor: help; }
+.hero-engine-panel .he-actions .he-action-help:focus-visible { outline: 2px solid rgba(225, 169, 71, 0.78); outline-offset: 2px; }
 .hero-engine-panel .he-actions button,
-.hero-engine-panel .he-trigger-grid button { flex: 1 1 calc(50% - 0.4rem); min-height: 2.15rem; margin: 0; padding: 0.4rem 0.55rem; border: 1px solid rgba(225, 169, 71, 0.22); border-radius: 0.45rem; color: rgba(255, 255, 255, 0.88); font-size: 0.65rem; line-height: 1.25; background: linear-gradient(180deg, rgba(225, 169, 71, 0.12), rgba(255, 255, 255, 0.035)); }
+.hero-engine-panel .he-trigger-grid button { min-height: 2.15rem; margin: 0; padding: 0.4rem 0.55rem; border: 1px solid rgba(225, 169, 71, 0.22); border-radius: 0.45rem; color: rgba(255, 255, 255, 0.88); font-size: 0.65rem; line-height: 1.25; background: linear-gradient(180deg, rgba(225, 169, 71, 0.12), rgba(255, 255, 255, 0.035)); }
+.hero-engine-panel .he-actions button { flex: 1 1 auto; width: 100%; }
+.hero-engine-panel .he-actions .he-action-help.is-unavailable button { pointer-events: none; }
 .hero-engine-panel .he-actions button:hover:not(:disabled),
 .hero-engine-panel .he-trigger-grid button:hover:not(:disabled) { border-color: rgba(225, 169, 71, 0.55); background: rgba(225, 169, 71, 0.18); }
 .hero-engine-panel .he-actions button:disabled,
 .hero-engine-panel .he-trigger-grid button:disabled { opacity: 0.38; }
+
+.he-action-tooltip-card {
+  position: fixed;
+  z-index: 100000;
+  width: min(22rem, calc(100vw - 1rem));
+  overflow: hidden;
+  border: 1px solid rgba(225, 169, 71, 0.46);
+  border-radius: 0.72rem;
+  color: rgba(255, 255, 255, 0.92);
+  background: linear-gradient(155deg, rgba(31, 30, 34, 0.99), rgba(13, 14, 19, 0.99));
+  box-shadow: 0 1rem 2.5rem rgba(0, 0, 0, 0.62), inset 0 1px rgba(255, 255, 255, 0.035);
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(0.3rem) scale(0.985);
+  transform-origin: center;
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+.he-action-tooltip-card.is-visible { opacity: 1; transform: translateY(0) scale(1); }
+.he-action-tooltip-card > header { display: flex; align-items: center; gap: 0.62rem; min-height: 3.55rem; padding: 0.65rem 0.72rem; border-bottom: 1px solid rgba(255, 255, 255, 0.085); background: linear-gradient(90deg, rgba(225, 169, 71, 0.14), rgba(255, 255, 255, 0.025)); }
+.he-action-tooltip-card > header > span { display: grid; flex: 0 0 2.25rem; width: 2.25rem; height: 2.25rem; place-items: center; border: 1px solid rgba(250, 196, 93, 0.48); border-radius: 0.55rem; color: #201a0d; background: linear-gradient(145deg, #f3c15d, #c9871f); box-shadow: 0 0.35rem 0.8rem rgba(0, 0, 0, 0.32); }
+.he-action-tooltip-card > header > div { min-width: 0; }
+.he-action-tooltip-card > header small { display: block; margin-bottom: 0.08rem; color: rgba(255, 255, 255, 0.48); font-size: 0.56rem; font-weight: 750; letter-spacing: 0.08em; text-transform: uppercase; }
+.he-action-tooltip-card > header h3 { overflow: hidden; margin: 0; color: #fff; font-family: var(--font-primary, sans-serif); font-size: 0.88rem; line-height: 1.15; text-overflow: ellipsis; white-space: nowrap; }
+.he-action-tooltip-card > header b { margin-left: auto; padding: 0.22rem 0.4rem; border: 1px solid rgba(119, 211, 150, 0.34); border-radius: 999px; color: #9ce6b4; background: rgba(40, 138, 75, 0.13); font-size: 0.52rem; letter-spacing: 0.055em; text-transform: uppercase; }
+.he-action-tooltip-card.is-unavailable > header b { border-color: rgba(239, 111, 94, 0.38); color: #ff9e8f; background: rgba(166, 43, 32, 0.16); }
+.he-action-tooltip-body { display: grid; gap: 0.65rem; padding: 0.72rem; }
+.he-action-tooltip-body > p { margin: 0; color: rgba(255, 255, 255, 0.76); font-size: 0.72rem; line-height: 1.48; }
+.he-action-tooltip-body dl { margin: 0; }
+.he-action-tooltip-body dl > div { display: flex; align-items: center; gap: 0.55rem; padding: 0.48rem 0.55rem; border: 1px solid rgba(255, 255, 255, 0.075); border-radius: 0.45rem; background: rgba(255, 255, 255, 0.035); }
+.he-action-tooltip-body dt { display: flex; align-items: center; gap: 0.35rem; color: rgba(255, 255, 255, 0.5); font-size: 0.59rem; font-weight: 750; letter-spacing: 0.055em; text-transform: uppercase; }
+.he-action-tooltip-body dt i { color: #e1a947; }
+.he-action-tooltip-body dd { margin: 0 0 0 auto; color: rgba(255, 255, 255, 0.88); font-size: 0.65rem; font-weight: 700; text-align: right; }
+.he-action-tooltip-body aside { padding: 0.52rem 0.58rem; border: 1px solid rgba(239, 111, 94, 0.25); border-radius: 0.5rem; color: #ffc2b8; background: rgba(166, 43, 32, 0.13); }
+.he-action-tooltip-body aside.is-ready { border-color: rgba(119, 211, 150, 0.22); color: #a9e9bd; background: rgba(40, 138, 75, 0.1); }
+.he-action-tooltip-body aside strong { display: flex; align-items: center; gap: 0.36rem; font-size: 0.64rem; }
+.he-action-tooltip-body aside ul { display: grid; gap: 0.22rem; margin: 0.34rem 0 0 1rem; padding: 0; color: rgba(255, 211, 204, 0.86); font-size: 0.64rem; line-height: 1.35; }
+.he-action-tooltip-card > footer { display: flex; align-items: center; gap: 0.32rem; padding: 0.42rem 0.72rem; border-top: 1px solid rgba(255, 255, 255, 0.06); color: rgba(255, 255, 255, 0.32); font-size: 0.54rem; background: rgba(0, 0, 0, 0.16); }
 .hero-engine-panel details.he-triggers { border-top: 1px solid var(--he-sheet-border); }
 .hero-engine-panel details.he-triggers summary { display: flex; align-items: center; gap: 0.38rem; padding: 0.58rem 0.7rem; color: rgba(255, 255, 255, 0.58); cursor: pointer; font-size: 0.61rem; font-weight: 740; letter-spacing: 0.05em; list-style: none; text-transform: uppercase; }
 .hero-engine-panel details.he-triggers summary::-webkit-details-marker { display: none; }

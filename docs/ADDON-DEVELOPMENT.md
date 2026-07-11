@@ -354,6 +354,35 @@ components before adding a new pattern.
 - Primary actions remain visible and visually distinct from destructive
   actions. Disabled actions SHOULD explain the unmet prerequisite.
 
+### Action help cards
+
+Every declared action SHOULD provide a localized `descriptionKey`. The
+Mechanics window uses it in a rich help card after a 500 ms hover or keyboard
+focus. The engine also shows evaluated resource costs, cooldown state, and all
+reasons that currently make the action unavailable.
+
+When an action uses `requiresFlag` or `forbidsFlag`, it SHOULD also declare the
+matching player-facing reason key:
+
+```ts
+{
+  id: "release-storm",
+  labelKey: "MYADDON.ReleaseStorm",
+  descriptionKey: "MYADDON.ReleaseStormDescription",
+  requiresFlag: "stormAwake",
+  requiresFlagReasonKey: "MYADDON.RequiresAwakenedStorm",
+  forbidsFlag: "stormSilenced",
+  forbidsFlagReasonKey: "MYADDON.StormIsSilenced"
+}
+```
+
+Reason text MUST describe the exact unmet rule and, when useful, how to satisfy
+it. Do not duplicate this behavior with a native `title`: native browser
+tooltips are visually inconsistent, cannot list multiple blockers, and are not
+reliably available on disabled controls. Hero Engine keeps disabled buttons
+hoverable through their help wrapper and exposes the same card on keyboard
+focus.
+
 ### Dialogs and selection lists
 
 Use Foundry's `DialogV2` for custom dialogs. A long selection dialog MUST have:

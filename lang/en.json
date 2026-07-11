@@ -34,10 +34,23 @@
       "Confirm": "Confirm",
       "Apply": "Apply change"
     },
+    "ActionTooltip": {
+      "Action": "Hero Engine action",
+      "Available": "Available",
+      "Unavailable": "Unavailable",
+      "Cost": "Cost",
+      "NoCost": "No resource cost",
+      "WhyUnavailable": "Why this is unavailable",
+      "Ready": "Ready to use",
+      "HoverHint": "Shown after a 500 ms hover",
+      "NoDescription": "Use {action} through this mechanic."
+    },
     "Errors": {
       "GMOnly": "Only the GM can do that.",
       "NotOwner": "You do not own this actor.",
       "Unavailable": "This action is not available right now.",
+      "RequiresState": "A required mechanic state is not active.",
+      "ForbiddenState": "The current mechanic state blocks this action.",
       "OnCooldown": "On cooldown ({remaining}).",
       "NotEnough": "Not enough {resource}.",
       "AlreadyTransformed": "A transformation is already active.",
@@ -177,6 +190,33 @@
         "Fractures": "Name Fractures"
       },
       "Resources": { "Charges": "Tenth Life charges", "LegendaryPoints": "Legendary Points" },
+      "ActionDescriptions": {
+        "Siphon": "Target a creature and attempt to steal one eligible feature as a Hollow Echo.",
+        "Field": "Spend every remaining Tenth Life charge to create the moving Field until its duration ends.",
+        "FieldExit": "Resolve the Strength save when an enemy attempts to leave the active Field.",
+        "Ultimate": "Request the March of the Tenth Legend. A player request waits for GM approval before the actor swap.",
+        "Rite": "Attempt the three DC 25 checks of the Rite of the Tenth Legend.",
+        "Purify": "Choose one persistent Hunger, Debt, Echo-slot, Skeldr, or Fracture consequence to repair.",
+        "SkeldrMove": "Spend 1 Legendary Point for Skeldr to move 60 feet and arm Thunderous Step after 20 feet.",
+        "MightyImpel": "Spend 1 Legendary Point to use Mighty Impel against a Huge or smaller creature.",
+        "DevastatingStrike": "Spend 2 Legendary Points to make the provisional force-and-thunder strike.",
+        "LegendaryEcho": "Spend 2 Legendary Points to manifest one stored Hollow Echo.",
+        "SecondSiphon": "Spend 3 Legendary Points to attempt a second Tenth Life Siphon this turn.",
+        "SkeldrRescue": "Spend 3 Legendary Points for Skeldr to preserve a downed ally at 1 HP.",
+        "HungerGuard": "Once per short rest, Skeldr prevents one point of Hunger.",
+        "EarlyReturn": "Record a protective Legend to call an absent Skeldr back early.",
+        "RecordLegend": "Record the name and deed of one mythic Legend."
+      },
+      "Availability": {
+        "FieldInactive": "The Field of the Tenth Mark must be active.",
+        "UltimateRest": "The Ultimate has already been spent; finish a long rest to restore it.",
+        "ApprovalPending": "The Ultimate request is waiting for the GM's ruling.",
+        "UltimateInactive": "The March of the Tenth Legend must be active.",
+        "TakeoverLocked": "The Nameless Sovereign controls the Ultimate's first turn.",
+        "SkeldrAbsent": "Skeldr is absent and cannot protect Thar’gunn.",
+        "GuardSpent": "Skeldr has already prevented Hunger during this short rest.",
+        "SkeldrPresent": "Skeldr is already present; an early return is unnecessary."
+      },
       "Hunger": {
         "T3": "The weapon’s whisper",
         "T5": "Predatory demand",

@@ -285,7 +285,11 @@ export interface ActionDef {
   apply?: StateOp[];
   /** State flag that must be truthy / falsy for the action to be available. */
   requiresFlag?: string;
+  /** Localized explanation shown when `requiresFlag` is not active. */
+  requiresFlagReasonKey?: string;
   forbidsFlag?: string;
+  /** Localized explanation shown when `forbidsFlag` is active. */
+  forbidsFlagReasonKey?: string;
   cooldown?: CooldownDef;
   roll?: { formula: string; flavorKey?: string };
   /** PromptDef id opened as part of the action (choice or save). */
