@@ -77,7 +77,7 @@ export function openActorMechanics(actor: any): any {
   const scrollState: { window: number; collections: Record<string, number> } = { window: 0, collections: {} };
   const captureScroll = () => {
     const element = document.getElementById(`hero-engine-actor-mechanics-${actor.id}`);
-    const content = element?.querySelector<HTMLElement>(".window-content") ?? element?.querySelector<HTMLElement>(".hero-engine-actor-window")?.parentElement;
+    const content = element?.querySelector<HTMLElement>(".hero-engine-actor-window");
     if (content) scrollState.window = content.scrollTop;
     element?.querySelectorAll<HTMLElement>("[data-he-collection]").forEach((collection) => {
       const id = collection.dataset["heCollection"];
@@ -87,7 +87,7 @@ export function openActorMechanics(actor: any): any {
   };
   const restoreScroll = (root: HTMLElement) => requestAnimationFrame(() => {
     const element = root.closest<HTMLElement>(".application") ?? root;
-    const content = element.querySelector<HTMLElement>(".window-content") ?? root;
+    const content = element.querySelector<HTMLElement>(".hero-engine-actor-window") ?? root;
     content.scrollTop = scrollState.window;
     element.querySelectorAll<HTMLElement>("[data-he-collection]").forEach((collection) => {
       const id = collection.dataset["heCollection"];
