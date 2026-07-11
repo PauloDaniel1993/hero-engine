@@ -1,4 +1,4 @@
-name: Publish Hero Engine 1.0.0
+name: Publish Hero Engine 1.0.1
 
 on:
   push:
@@ -30,8 +30,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh release view v1.0.0 >/dev/null 2>&1; then
-            gh release upload v1.0.0 dist/module.json#module.json hero-engine.zip#hero-engine.zip --clobber
+          if gh release view v1.0.1 >/dev/null 2>&1; then
+            gh release upload v1.0.1 dist/module.json#module.json hero-engine.zip#hero-engine.zip --clobber
           else
-            gh release create v1.0.0 --target "$GITHUB_SHA" --title "Hero Engine 1.0.0 — Thar’gunn Mythic Addon" --notes-file CHANGELOG.md dist/module.json#module.json hero-engine.zip#hero-engine.zip
+            gh release create v1.0.1 --target "$GITHUB_SHA" --title "Hero Engine 1.0.1 — Thar’gunn Mythic Addon" --notes-file CHANGELOG.md dist/module.json#module.json hero-engine.zip#hero-engine.zip
           fi

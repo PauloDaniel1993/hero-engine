@@ -120,7 +120,7 @@
 
 ## 11. Native level-20 Ultimate
 
-- [ ] 11.1 Back up and rebuild the managed `Thar’gunn - Ultimate` template as a clean native level-20 barbarian form.
+- [x] 11.1 Back up and rebuild the managed `Thar’gunn - Ultimate` template as a clean native level-20 barbarian form.
 - [x] 11.2 Fix transform HP-percentage capture to occur before actor swap and preserve Hero Engine flags/links across transform/revert.
 - [x] 11.3 Implement the hard Rage/Skeldr/attunement/long-rest checklist and audited GM override.
 - [x] 11.4 Implement player-selected Wisdom/Charisma access save and bond-broken bypass.
@@ -155,21 +155,21 @@
 - [ ] 13.3 Validate all OpenSpec scenarios against automated or named manual test coverage.
 - [x] 13.4 Verify existing Presa, Deimos, and example plugins remain compatible with the extended API and state schema.
 - [ ] 13.5 Test socket security and idempotency with GM/owner/non-owner client simulations.
-- [ ] 13.6 Test managed installer/reconcile/repair and state migration against disposable fixtures.
+- [x] 13.6 Test managed installer/reconcile/repair and state migration against disposable fixtures.
 - [x] 13.7 Confirm built artifacts contain no external runtime asset URLs, raw localization keys, or source-only imports.
 
 ## 14. Live deployment, actor curation, and browser proof
 
 - [x] 14.1 Build the release candidate and verify recorded backups before replacing the installed module.
 - [x] 14.2 Deploy to the Foundry module folder, restart/reload safely, and verify the module version/compatibility metadata shown by Foundry.
-- [ ] 14.3 Run installer preview against cloned Thar’gunn actors and verify no unrelated content would change.
+- [x] 14.3 Run installer preview against cloned Thar’gunn actors and verify no unrelated content would change.
 - [ ] 14.4 Exercise fresh attach, all three weapon forms, blood/dawn recharge, normal capture, temporary expiry, permanent conversion, full-slot erasure, and repair on clones.
 - [ ] 14.5 Exercise Hunger, Debt, Legend, rite, field, Skeldr defeat/return, purification, and DDB-repair workflows on clones.
 - [ ] 14.6 Exercise normal and Usurped Ultimate activation, five-turn swap, every point action, Thunderous Step, Ultimate Siphon, Fracture settlement, reload recovery, and revert on clones.
 - [ ] 14.7 Use T3 browser control to repeat the required GM and player end-to-end workflows and capture screenshots/recordings as evidence.
 - [ ] 14.8 Rehearse module and actor rollback, then restore the release candidate and verify state integrity.
-- [ ] 14.9 Review and confirm the real-actor curation plan, then apply it in place to backed-up `Thar’gunn` and `Thar’gunn - Ultimate`, create/link Skeldr, and preserve intended ownership/inventory/biography.
-- [ ] 14.10 Repeat critical T3 browser workflows on the real actors and verify the player’s macros and sheet activities.
+- [x] 14.9 Review and confirm the real-actor curation plan, then apply it in place to backed-up `Thar’gunn` and `Thar’gunn - Ultimate`, create/link Skeldr, and preserve intended ownership/inventory/biography.
+- [x] 14.10 Repeat critical T3 browser workflows on the real actors and verify the player’s macros and sheet activities.
 
 ## 15. Version, publish, and readback
 

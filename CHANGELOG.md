@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.1 — 2026-07-11
+
+- Fix Foundry 14 managed activity IDs so base/Ultimate features and all four
+  Skeldr features are created as valid dnd5e activities.
+- Reconcile weapon activities from serialized source data and remove the
+  original imported attack, leaving exactly the three managed weapon forms.
+- Persist Skeldr's dnd5e creature size as Huge in addition to its 3×3 token.
+- Validate the repair through disposable clone install/reconcile, Echo/Field/
+  Ultimate workflows, and backed-up real-actor curation.
+
 ## 1.0.0 — 2026-07-11
 
 - Port the complete improved live UI into TypeScript source: GM scene-control
