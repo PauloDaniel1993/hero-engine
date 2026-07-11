@@ -133,6 +133,8 @@ html[data-hero-engine-theme="storm"] #scene-controls [data-tool="hero-engine-gm"
 .hero-engine-panel .he-meter > i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #b77725, #f0c15f); box-shadow: 0 0 8px rgba(225, 169, 71, 0.25); }
 .hero-engine-panel .he-badge { padding: 0.12rem 0.35rem; border: 1px solid rgba(232, 101, 91, 0.24); border-radius: 2rem; color: #f0a099; font-size: 0.55rem; font-weight: 600; background: rgba(176, 52, 46, 0.12); }
 .hero-engine-panel .he-transform { background: rgba(114, 81, 173, 0.1); }
+.hero-engine-panel .he-transform-end { display: inline-flex; width: auto; min-height: 1.7rem; align-items: center; gap: 0.3rem; margin: 0 0 0 0.45rem; padding: 0.25rem 0.48rem; border: 1px solid rgba(190, 142, 255, 0.3); border-radius: 0.38rem; color: rgba(238, 222, 255, 0.88); font-size: 0.59rem; font-weight: 700; background: rgba(114, 81, 173, 0.16); }
+.hero-engine-panel .he-transform-end:hover:not(:disabled) { border-color: rgba(211, 174, 255, 0.62); background: rgba(114, 81, 173, 0.3); }
 .hero-engine-panel .he-transform label > i,
 .hero-engine-panel .he-stance label > i { color: var(--he-sheet-accent); }
 .hero-engine-panel .he-stance select { width: min(55%, 16rem); height: 1.85rem; border: 1px solid var(--he-sheet-border); border-radius: 0.4rem; color: rgba(255, 255, 255, 0.92); font-size: 0.68rem; background: #20232d; }

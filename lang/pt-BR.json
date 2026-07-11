@@ -91,6 +91,7 @@
       "Open": "Abrir mecânicas do Hero Engine",
       "Subtitle": "Poderes épicos, recursos e estados ativos",
       "Transform": "Forma ativa",
+      "EndTransform": "Encerrar transformação",
       "RoundsLeft": "{rounds} rodada(s) restante(s)",
       "Character": "Personagem",
       "ActiveState": "Estados ativos",

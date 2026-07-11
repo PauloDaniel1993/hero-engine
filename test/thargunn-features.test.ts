@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { activateUltimate, echoProjectionActor, eligibleFeatures, isRaging, isUltimateApprovalRequest, reconcileEchoProjections, thargunnMythic, ultimateAccessCancelled } from "../src/plugins/thargunn";
+import { activateUltimate, echoProjectionActor, eligibleFeatures, isRaging, isUltimateApprovalRequest, reconcileEchoProjections, recoverPendingUltimateApproval, thargunnMythic, ultimateAccessCancelled } from "../src/plugins/thargunn";
 
 function ultimateContext() {
   const flags: Record<string, unknown> = {
@@ -116,6 +116,25 @@ describe("Thar’gunn eligible feature extraction", () => {
       announceUse: false,
     });
     expect(thargunnMythic.actions?.find((action) => action.id === "ultimate")?.cooldown).toBeUndefined();
+  });
+
+  it("requeues a persisted Ultimate request when a GM later joins", async () => {
+    (globalThis as any).game = {
+      user: { id: "player-1", isGM: false },
+      users: { get: (id: string) => id === "player-1" ? { id } : null },
+      actors: { find: () => null },
+      i18n: { localize: (key: string) => key },
+    };
+    (globalThis as any).foundry = { utils: { randomID: () => "ultimate-request-reconnect" } };
+    const { ctx, flags } = ultimateContext();
+    await activateUltimate(ctx);
+    expect(flags.ultimateApprovalPending).toBe(true);
+
+    ctx.queueAdjudication.mockClear();
+    (globalThis as any).game.user = { id: "gm-1", isGM: true };
+    await expect(recoverPendingUltimateApproval(ctx)).resolves.toBe(true);
+    expect(ctx.queueAdjudication).toHaveBeenCalledOnce();
+    expect(ctx.queueAdjudication).toHaveBeenCalledWith("ultimate-transformation");
   });
 
   it("performs the actor swap only after the GM confirms the ruling", async () => {

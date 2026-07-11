@@ -91,6 +91,7 @@
       "Open": "Open Hero Engine mechanics",
       "Subtitle": "Epic powers, resources and active states",
       "Transform": "Active form",
+      "EndTransform": "End transformation",
       "RoundsLeft": "{rounds} round(s) left",
       "Character": "Character",
       "ActiveState": "Active states",

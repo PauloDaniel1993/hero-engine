@@ -275,12 +275,14 @@ function renderMechanic(att: Attachment, plugin: MechanicPlugin, state: Instance
   // Active transformation countdown.
   if (state.transform) {
     const def = plugin.transformations?.find((t) => t.id === state.transform!.id);
+    const endButton = `<button type="button" class="he-transform-end" data-he="end-transform" data-plugin="${plugin.id}" ${dis}
+      aria-label="${escapeHtml(localize("HEROENGINE.Panel.EndTransform"))}"><i class="fa-solid fa-rotate-left"></i>${escapeHtml(localize("HEROENGINE.Panel.EndTransform"))}</button>`;
     stateRows.push(
       `<div class="he-row he-transform"><div class="he-row-main"><label><i class="fa-solid fa-wand-sparkles"></i>${escapeHtml(localize("HEROENGINE.Panel.Transform"))}</label>
         <span class="he-value">${escapeHtml(def ? localize(def.labelKey) : state.transform.id)} — ${localize(
           "HEROENGINE.Panel.RoundsLeft",
           { rounds: state.transform.roundsLeft }
-        )}</span></div></div>`
+        )}</span>${endButton}</div></div>`
     );
   }
 
@@ -435,6 +437,9 @@ function bindPanel(root: HTMLElement, actor: any, onMutation: () => void): void 
       } else if (kind === "trigger") {
         const ctx = makeContext(att);
         await ctx?.fireTrigger(id, { event: "manual" });
+      } else if (kind === "end-transform") {
+        const ctx = makeContext(att);
+        await ctx?.endTransform();
       } else if (kind === "adjust" && game.user.isGM) {
         const ctx = makeContext(att);
         await ctx?.state.adjust(id, Number(button.dataset["delta"] ?? 0));

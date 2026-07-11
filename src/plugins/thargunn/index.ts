@@ -567,6 +567,18 @@ export async function activateUltimate(ctx: MechanicContext): Promise<void> {
   }
 }
 
+/** Recreate a lost socket-only request when a GM joins after the player. */
+export async function recoverPendingUltimateApproval(ctx: MechanicContext): Promise<boolean> {
+  if (!game.user?.isGM || !ctx.state.getFlag<boolean>("ultimateApprovalPending")) return false;
+  const request = ctx.state.getFlag<unknown>("ultimateApprovalRequest");
+  if (!isUltimateApprovalRequest(request)) {
+    await clearUltimateApproval(ctx);
+    return false;
+  }
+  await ctx.queueAdjudication("ultimate-transformation");
+  return true;
+}
+
 async function finishUltimate(ctx: MechanicContext): Promise<void> {
   const fractures = ctx.state.get("fractures");
   const damage = await ctx.rollDice(ultimateExpiryDamage(fractures), `${P}.Ultimate.ExpiryDamage`);
@@ -656,7 +668,10 @@ const hooks = {
     for (const [key, value] of Object.entries(defaults)) if (ctx.state.getFlag(key) === undefined) await ctx.state.setFlag(key, value);
     await syncHunger(ctx);
   },
-  async onRecordsReady(ctx: MechanicContext) { await reconcileEchoProjections(ctx); },
+  async onRecordsReady(ctx: MechanicContext) {
+    await reconcileEchoProjections(ctx);
+    await recoverPendingUltimateApproval(ctx);
+  },
   async onTrigger(ctx: MechanicContext, trigger: TriggerDef, payload: TriggerPayload) {
     if (trigger.id === "long-rest") {
       await ctx.state.set("hungerTemporary", 0);
