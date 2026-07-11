@@ -13,16 +13,16 @@ Date: 2026-07-11 (Europe/Lisbon)
 ## Automated gates
 
 - `npm run check`: pass; TypeScript, plugin import guard, 286-key en/pt-BR parity.
-- `npm test -- --run`: pass; 73 tests across 10 files.
+- `npm test -- --run`: pass; 77 tests across 12 files.
 - `npm run build`: pass; reproducible Actor/Item/Macro packs, Vite bundle,
   public declarations, import guard, and bundle audit.
-- Bundle audit: 36 files, 3.36 MB, no remote runtime artwork.
+- Bundle audit: 36 files, 3.38 MB, no remote runtime artwork.
 - `openspec validate add-thargunn-mythic-addon --strict --json`: pass.
 
 ## Release artifact
 
 - Archive: `/tmp/hero-engine-1.0.0.zip`
-- SHA-256: `c4322556f004717170b698cffb68ac56d07e3294da790efec63d6845a317fec1`
+- SHA-256: `cf0de63fb940473da08f2fd8e00d84a7a487676dc646ea83dec9c37103f525a1`.
 - Inspected archive manifest: `hero-engine` 1.0.0, Foundry 13–14,
   verified 14, all three Thar’gunn packs, canonical GitHub URLs.
 

@@ -38,16 +38,16 @@
 - [x] 4.3 Persist collection section/search/filter presentation per client without world-state writes.
 - [x] 4.4 Add record-action dispatch through the public plugin context.
 - [x] 4.5 Add stable managed Item/Activity resolution and a repair state when linked content is missing.
-- [ ] 4.6 Add UI tests or deterministic render fixtures for large, empty, blocked, temporary, and missing-link collections.
+- [x] 4.6 Add UI tests or deterministic render fixtures for large, empty, blocked, temporary, and missing-link collections.
 
 ## 5. Secure target selection and rules timing
 
-- [ ] 5.1 Add weapon/activity-specific qualifying opportunity records with stable event IDs, target identity, combat/world anchor, TTL, and single-use state.
-- [ ] 5.2 Normalize dnd5e and Midi-QOL attack/kill hooks so duplicate delivery cannot create duplicate opportunities.
+- [x] 5.1 Add weapon/activity-specific qualifying opportunity records with stable event IDs, target identity, combat/world anchor, TTL, and single-use state.
+- [x] 5.2 Normalize dnd5e and Midi-QOL attack/kill hooks so duplicate delivery cannot create duplicate opportunities.
 - [x] 5.3 Add GM-authoritative socket requests that revalidate owner, actor, target, managed weapon, trigger, TTL, and once-per-turn rules.
-- [ ] 5.4 Build eligible feature extraction for Items, Activities, spell groups, legendary/lair/class features, and supported actor traits.
-- [ ] 5.5 Implement opaque redacted player descriptors and tests proving private actor data never crosses the socket boundary.
-- [ ] 5.6 Add the direct player feature picker and validated category chooser.
+- [x] 5.4 Build eligible feature extraction for Items, Activities, spell groups, legendary/lair/class features, and supported actor traits.
+- [x] 5.5 Implement opaque redacted player descriptors and tests proving private actor data never crosses the socket boundary.
+- [x] 5.6 Add the direct player feature picker and validated category chooser.
 - [x] 5.7 Implement authoritative target saving throws, normalized capture settlement, and idempotent duplicate response handling.
 - [x] 5.8 Implement non-destructive supported Item/Activity suppression plus visible fallback suppression effects.
 - [x] 5.9 Add persisted game-time/combat-time anchors for ten-round, 60-world-second, transform-bound, and manual expiry.
