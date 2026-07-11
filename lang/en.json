@@ -271,6 +271,12 @@
       "Ultimate": {
         "Name": "The March of the Tenth Legend",
         "Action": "Activate Ultimate",
+        "ApprovalTitle": "Approve the Ultimate transformation",
+        "ApprovalHint": "The player completed the access save. Approve to re-check every prerequisite and perform the dnd5e actor swap on the GM client. Deny to make no change.",
+        "ApprovalRequested": "requests GM approval for the Ultimate transformation. No transformation or long-rest use has been applied yet.",
+        "ApprovalMissing": "This Ultimate request is missing or no longer pending. Ask the player to submit it again.",
+        "ApprovalInvalidOwner": "The requesting user no longer owns this actor. The Ultimate request was cancelled.",
+        "ActivationFailed": "The Ultimate form could not be created. No Ultimate use was consumed.",
         "Blocked": "Ultimate prerequisites failed",
         "AccessTitle": "Who commands the Tenth March?",
         "AccessBody": "Choose Wisdom or Charisma to resist the Nameless Sovereign.",

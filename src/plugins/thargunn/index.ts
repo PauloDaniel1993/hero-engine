@@ -51,6 +51,50 @@ export function ultimateAccessCancelled(result: PromptResult | null): boolean {
   return result === null || result.dismissed === true;
 }
 
+interface UltimateApprovalRequest {
+  version: 1;
+  requestId: string;
+  requestedBy: string;
+  access: PromptResult;
+}
+
+export function isUltimateApprovalRequest(value: unknown): value is UltimateApprovalRequest {
+  if (!value || typeof value !== "object") return false;
+  const request = value as Partial<UltimateApprovalRequest>;
+  return request.version === 1
+    && typeof request.requestId === "string"
+    && request.requestId.length > 0
+    && typeof request.requestedBy === "string"
+    && request.access?.promptId === "ultimate-access"
+    && typeof request.access.success === "boolean";
+}
+
+function ultimateFailures(ctx: MechanicContext): string[] {
+  const actor = actorOf(ctx);
+  const item = weapon(ctx);
+  return canUseUltimate({
+    raging: isRaging(actor, ctx) || ctx.state.getFlag<boolean>("overrideRage") === true,
+    skeldrPresent: ctx.state.getFlag<boolean>("skeldrPresent") !== false,
+    attuned: item?.system?.attuned === true || ctx.state.getFlag<boolean>("overrideAttunement") === true,
+    ultimateReady: ctx.state.getFlag<boolean>("ultimateReady") !== false,
+  });
+}
+
+function assertUltimateAvailable(ctx: MechanicContext): void {
+  const failures = ultimateFailures(ctx);
+  if (failures.length && !ctx.state.getFlag<boolean>("ultimateOverride")) {
+    throw new Error(`${game.i18n.localize(`${P}.Ultimate.Blocked`)}: ${failures.join(", ")}`);
+  }
+  if (ctx.state.transform()) throw new Error(game.i18n.localize("HEROENGINE.Errors.AlreadyTransformed"));
+}
+
+async function clearUltimateApproval(ctx: MechanicContext): Promise<void> {
+  await ctx.applyOps([
+    { op: "set", target: "flag:ultimateApprovalPending", value: false },
+    { op: "set", target: "flag:ultimateApprovalRequest", value: null },
+  ]);
+}
+
 async function adjustHunger(ctx: MechanicContext, amount: number): Promise<void> {
   await ctx.state.adjust("hungerTemporary", amount);
   await ctx.state.set("hungerTotal", ctx.state.get("hungerTemporary") + ctx.state.get("hungerPermanent"));
@@ -409,40 +453,118 @@ async function eraseEcho(ctx: MechanicContext, collection: RecordCollectionDef, 
   await ctx.records.remove(collection.id, record.id, `erase:${record.id}`);
 }
 
-async function activateUltimate(ctx: MechanicContext): Promise<void> {
-  const actor = actorOf(ctx);
-  const item = weapon(ctx);
-  const failures = canUseUltimate({
-    raging: isRaging(actor, ctx) || ctx.state.getFlag<boolean>("overrideRage") === true,
-    skeldrPresent: ctx.state.getFlag<boolean>("skeldrPresent") !== false,
-    attuned: item?.system?.attuned === true || ctx.state.getFlag<boolean>("overrideAttunement") === true,
+async function completeUltimate(ctx: MechanicContext, access: PromptResult): Promise<void> {
+  assertUltimateAvailable(ctx);
+  const usurped = access?.success === false;
+  const usurpedNaturalOne = usurped && access?.natural === 1;
+  const previous = {
+    ultimateUsurped: ctx.state.getFlag<boolean>("ultimateUsurped") ?? false,
+    usurpedFirstEchoPending: ctx.state.getFlag<boolean>("usurpedFirstEchoPending") ?? false,
+    ultimateTakeoverLocked: ctx.state.getFlag<boolean>("ultimateTakeoverLocked") ?? false,
+    ultimateTurns: ctx.state.getFlag<number>("ultimateTurns") ?? 0,
     ultimateReady: ctx.state.getFlag<boolean>("ultimateReady") !== false,
-  });
-  if (failures.length && !ctx.state.getFlag<boolean>("ultimateOverride")) throw new Error(`${game.i18n.localize(`${P}.Ultimate.Blocked`)}: ${failures.join(", ")}`);
+    ultimateActive: ctx.state.getFlag<boolean>("ultimateActive") ?? false,
+    skeldrMovement: ctx.state.getFlag<number>("skeldrMovement") ?? 0,
+    fractures: ctx.state.get("fractures"),
+    legendaryPoints: ctx.state.get("legendaryPoints"),
+  };
+
+  await ctx.applyOps([
+    { op: "set", target: "flag:ultimateUsurped", value: usurped },
+    { op: "set", target: "flag:usurpedFirstEchoPending", value: usurped },
+    { op: "set", target: "flag:ultimateTakeoverLocked", value: usurpedNaturalOne },
+    { op: "set", target: "flag:ultimateTurns", value: 0 },
+    { op: "set", target: "flag:ultimateReady", value: false },
+    { op: "set", target: "fractures", value: usurped ? 2 : 0 },
+    { op: "set", target: "legendaryPoints", value: 3 },
+    { op: "set", target: "flag:ultimateActive", value: true },
+    { op: "set", target: "flag:skeldrMovement", value: 0 },
+    { op: "set", target: "flag:ultimateApprovalPending", value: false },
+    { op: "set", target: "flag:ultimateApprovalRequest", value: null },
+  ]);
+
+  try {
+    await ctx.activateTransform("tenth-march");
+    if (ctx.state.transform()?.id !== "tenth-march") {
+      throw new Error(game.i18n.localize(`${P}.Ultimate.ActivationFailed`));
+    }
+  } catch (error) {
+    // A chat-card failure after a successful dnd5e swap must not undo the
+    // canonical state. Only restore when no active transformation exists.
+    if (ctx.state.transform()?.id !== "tenth-march") {
+      await ctx.applyOps([
+        { op: "set", target: "flag:ultimateUsurped", value: previous.ultimateUsurped },
+        { op: "set", target: "flag:usurpedFirstEchoPending", value: previous.usurpedFirstEchoPending },
+        { op: "set", target: "flag:ultimateTakeoverLocked", value: previous.ultimateTakeoverLocked },
+        { op: "set", target: "flag:ultimateTurns", value: previous.ultimateTurns },
+        { op: "set", target: "flag:ultimateReady", value: previous.ultimateReady },
+        { op: "set", target: "fractures", value: previous.fractures },
+        { op: "set", target: "legendaryPoints", value: previous.legendaryPoints },
+        { op: "set", target: "flag:ultimateActive", value: previous.ultimateActive },
+        { op: "set", target: "flag:skeldrMovement", value: previous.skeldrMovement },
+        { op: "set", target: "flag:ultimateApprovalPending", value: false },
+        { op: "set", target: "flag:ultimateApprovalRequest", value: null },
+      ]);
+      throw error;
+    }
+    console.warn("hero-engine | Ultimate transformed but a post-swap operation failed", error);
+  }
+
+  // These are projections of the already-active Ultimate. Keep the actor swap
+  // authoritative even if an optional Skeldr effect or follow-up ruling fails.
+  const skeldr = await skeldrOf(ctx);
+  if (skeldr) {
+    try {
+      await skeldr.update({ "system.attributes.movement.walk": 120 });
+      await upsertNarrativeEffect(skeldr, "thargunn.effect.ultimate-skeldr", `${P}.Ultimate.SkeldrEnhancement`);
+    } catch (error) {
+      console.error("hero-engine | failed to reconcile Skeldr's Ultimate projection", error);
+    }
+  }
+  try {
+    if (usurped) await ctx.queueAdjudication("usurped-first-echo");
+    if (usurpedNaturalOne) await ctx.queueAdjudication("usurped-first-turn");
+  } catch (error) {
+    console.error("hero-engine | failed to queue an Ultimate follow-up ruling", error);
+  }
+}
+
+export async function activateUltimate(ctx: MechanicContext): Promise<void> {
+  assertUltimateAvailable(ctx);
   let access: PromptResult | null = { promptId: "ultimate-access", success: true };
   if (!ctx.state.getFlag<boolean>("bondBroken")) {
     access = await ctx.openPrompt("ultimate-access");
     if (ultimateAccessCancelled(access)) return;
   }
-  const usurped = access?.success === false;
-  const usurpedNaturalOne = usurped && access?.natural === 1;
-  await ctx.state.setFlag("ultimateUsurped", usurped);
-  await ctx.state.setFlag("usurpedFirstEchoPending", usurped);
-  await ctx.state.setFlag("ultimateTakeoverLocked", usurpedNaturalOne);
-  await ctx.state.setFlag("ultimateTurns", 0);
-  await ctx.state.setFlag("ultimateReady", false);
-  await ctx.state.set("fractures", usurped ? 2 : 0);
-  await ctx.state.set("legendaryPoints", 3);
-  await ctx.state.setFlag("ultimateActive", true);
-  await ctx.state.setFlag("skeldrMovement", 0);
-  const skeldr = await skeldrOf(ctx);
-  if (skeldr) {
-    await skeldr.update({ "system.attributes.movement.walk": 120 });
-    await upsertNarrativeEffect(skeldr, "thargunn.effect.ultimate-skeldr", `${P}.Ultimate.SkeldrEnhancement`);
+  if (!access) return;
+
+  if (game.user?.isGM) {
+    await completeUltimate(ctx, access);
+    return;
   }
-  if (usurped) await ctx.queueAdjudication("usurped-first-echo");
-  if (usurpedNaturalOne) await ctx.queueAdjudication("usurped-first-turn");
-  await ctx.activateTransform("tenth-march");
+
+  const request: UltimateApprovalRequest = {
+    version: 1,
+    requestId: foundry.utils.randomID(),
+    requestedBy: String(game.user?.id ?? ""),
+    access: {
+      promptId: "ultimate-access",
+      success: access.success === true,
+      total: access.total,
+      natural: access.natural,
+      ability: access.ability,
+    },
+  };
+  await ctx.applyOps([
+    { op: "set", target: "flag:ultimateApprovalPending", value: true },
+    { op: "set", target: "flag:ultimateApprovalRequest", value: request },
+  ]);
+  await ctx.queueAdjudication("ultimate-transformation");
+  try {
+    await ctx.postChat(`${P}.Ultimate.ApprovalRequested`);
+  } catch (error) {
+    console.warn("hero-engine | failed to post the Ultimate approval request card", error);
+  }
 }
 
 async function finishUltimate(ctx: MechanicContext): Promise<void> {
@@ -529,6 +651,7 @@ const hooks = {
     const defaults: Record<string, unknown> = {
       ultimateReady: true, skeldrPresent: true, fieldActive: false, fieldLocked: false,
       bondBroken: false, bloodSinceDawn: false, ultimateUsurped: false,
+      ultimateApprovalPending: false,
     };
     for (const [key, value] of Object.entries(defaults)) if (ctx.state.getFlag(key) === undefined) await ctx.state.setFlag(key, value);
     await syncHunger(ctx);
@@ -731,6 +854,29 @@ const hooks = {
     if (threshold.at === 10) await ctx.queueAdjudication(broken ? "legend-memory-distortion" : "hunger-name-fragment");
   },
   async onAdjudicated(ctx: MechanicContext, adjudication: any, resultId: string) {
+    if (adjudication.id === "ultimate-transformation") {
+      const request = ctx.state.getFlag<unknown>("ultimateApprovalRequest");
+      if (resultId !== "confirm") {
+        await clearUltimateApproval(ctx);
+        return;
+      }
+      if (!ctx.state.getFlag<boolean>("ultimateApprovalPending") || !isUltimateApprovalRequest(request)) {
+        await clearUltimateApproval(ctx);
+        throw new Error(game.i18n.localize(`${P}.Ultimate.ApprovalMissing`));
+      }
+      const requester = game.users?.get?.(request.requestedBy);
+      if (!requester || !(ctx.canonicalActor as any).testUserPermission?.(requester, "OWNER")) {
+        await clearUltimateApproval(ctx);
+        throw new Error(game.i18n.localize(`${P}.Ultimate.ApprovalInvalidOwner`));
+      }
+      try {
+        await completeUltimate(ctx, request.access);
+      } catch (error) {
+        await clearUltimateApproval(ctx);
+        throw error;
+      }
+      return;
+    }
     if (adjudication.id === "purification") {
       if (resultId === "hunger") { await ctx.state.set("hungerPermanent", 0); await syncHunger(ctx); }
       if (resultId === "debt") await ctx.state.set("essenceDebt", 0);
@@ -815,7 +961,7 @@ export const thargunnMythic: MechanicPlugin = {
     { id: "siphon-manual", labelKey: `${P}.Siphon.Action`, runHook: true },
     { id: "field", labelKey: `${P}.Field.Action`, runHook: true, cooldown: { type: "longRest" } },
     { id: "field-exit-save", labelKey: `${P}.Field.ExitAction`, requiresFlag: "fieldActive", runHook: true },
-    { id: "ultimate", labelKey: `${P}.Ultimate.Action`, runHook: true, cooldown: { type: "longRest" } },
+    { id: "ultimate", labelKey: `${P}.Ultimate.Action`, requiresFlag: "ultimateReady", forbidsFlag: "ultimateApprovalPending", runHook: true, announceUse: false },
     { id: "rite", labelKey: `${P}.Rite.Action`, gmOnly: true, runHook: true },
     { id: "purify", labelKey: `${P}.Purification.Action`, gmOnly: true, runHook: true },
     { id: "skeldr-move", labelKey: `${P}.Ultimate.SkeldrMove`, costs: [{ resource: "legendaryPoints", amount: 1 }], requiresFlag: "ultimateActive", forbidsFlag: "ultimateTakeoverLocked", runHook: true },
@@ -832,6 +978,7 @@ export const thargunnMythic: MechanicPlugin = {
     swap: { formActorName: "Thar’gunn - Ultimate", hpCarry: "keep-percent" }, onExpire: { runHook: true, chatKey: `${P}.Ultimate.Ended`, onManual: true } }],
   tables: [{ id: "erasure-price", labelKey: `${P}.Echo.ErasureTable`, die: "1d6", entries: [1,2,3,4,5,6].map((roll) => ({ min: roll, max: roll, textKey: `${P}.Echo.Erasure${roll}` })) }],
   adjudications: [
+    { id: "ultimate-transformation", titleKey: `${P}.Ultimate.ApprovalTitle`, descriptionKey: `${P}.Ultimate.ApprovalHint`, kind: "confirm", runHook: true },
     { id: "secure-siphon", titleKey: `${P}.Siphon.GmTitle`, descriptionKey: `${P}.Siphon.GmHint`, kind: "confirm" },
     { id: "high-tier-permanent-hunger", titleKey: `${P}.Hunger.PermanentRuling`, kind: "confirm" },
     { id: "hunger-cruel-demand", titleKey: `${P}.Hunger.CruelDemand`, kind: "confirm" },

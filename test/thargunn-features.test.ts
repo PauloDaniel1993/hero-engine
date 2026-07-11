@@ -1,10 +1,45 @@
-import { afterEach, describe, expect, it } from "vitest";
-import { echoProjectionActor, eligibleFeatures, isRaging, reconcileEchoProjections, ultimateAccessCancelled } from "../src/plugins/thargunn";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { activateUltimate, echoProjectionActor, eligibleFeatures, isRaging, isUltimateApprovalRequest, reconcileEchoProjections, thargunnMythic, ultimateAccessCancelled } from "../src/plugins/thargunn";
+
+function ultimateContext() {
+  const flags: Record<string, unknown> = {
+    overrideRage: true,
+    overrideAttunement: true,
+    skeldrPresent: true,
+    ultimateReady: true,
+    ultimateActive: false,
+    ultimateApprovalPending: false,
+    bondBroken: true,
+  };
+  const values: Record<string, number> = { fractures: 0, legendaryPoints: 0 };
+  let transform: { id: string; roundsLeft: number } | null = null;
+  const ctx: any = {
+    actor: { items: [], effects: [], statuses: new Set() },
+    canonicalActor: { testUserPermission: () => true },
+    state: {
+      get: (id: string) => values[id] ?? 0,
+      getFlag: (key: string) => flags[key],
+      transform: () => transform,
+    },
+    applyOps: vi.fn(async (ops: any[]) => {
+      for (const op of ops) {
+        if (op.target.startsWith("flag:")) flags[op.target.slice(5)] = op.value;
+        else values[op.target] = Number(op.value ?? 0);
+      }
+    }),
+    openPrompt: vi.fn(),
+    queueAdjudication: vi.fn(async () => undefined),
+    postChat: vi.fn(async () => undefined),
+    activateTransform: vi.fn(async () => { transform = { id: "tenth-march", roundsLeft: 5 }; }),
+  };
+  return { ctx, flags, values, setTransform: (value: typeof transform) => { transform = value; } };
+}
 
 describe("Thar’gunn eligible feature extraction", () => {
   afterEach(() => {
     delete (globalThis as any).game;
     delete (globalThis as any).foundry;
+    vi.restoreAllMocks();
   });
 
   it("normalizes items, activities, spells, class features, and actor traits", () => {
@@ -56,6 +91,97 @@ describe("Thar’gunn eligible feature extraction", () => {
     expect(ultimateAccessCancelled({ promptId: "ultimate-access", dismissed: true })).toBe(true);
     expect(ultimateAccessCancelled({ promptId: "ultimate-access", success: false })).toBe(false);
     expect(ultimateAccessCancelled({ promptId: "ultimate-access", success: true })).toBe(false);
+  });
+
+  it("queues a player Ultimate as a ruling without transforming or consuming it", async () => {
+    (globalThis as any).game = {
+      user: { id: "player-1", isGM: false },
+      users: { get: (id: string) => id === "player-1" ? { id } : null },
+      actors: { find: () => null },
+      i18n: { localize: (key: string) => key },
+    };
+    (globalThis as any).foundry = { utils: { randomID: () => "ultimate-request-1" } };
+    const { ctx, flags } = ultimateContext();
+
+    await activateUltimate(ctx);
+
+    expect(ctx.queueAdjudication).toHaveBeenCalledWith("ultimate-transformation");
+    expect(ctx.activateTransform).not.toHaveBeenCalled();
+    expect(flags.ultimateApprovalPending).toBe(true);
+    expect(flags.ultimateReady).toBe(true);
+    expect(isUltimateApprovalRequest(flags.ultimateApprovalRequest)).toBe(true);
+    expect(thargunnMythic.actions?.find((action) => action.id === "ultimate")).toMatchObject({
+      requiresFlag: "ultimateReady",
+      forbidsFlag: "ultimateApprovalPending",
+      announceUse: false,
+    });
+    expect(thargunnMythic.actions?.find((action) => action.id === "ultimate")?.cooldown).toBeUndefined();
+  });
+
+  it("performs the actor swap only after the GM confirms the ruling", async () => {
+    (globalThis as any).game = {
+      user: { id: "player-1", isGM: false },
+      users: { get: (id: string) => id === "player-1" ? { id } : null },
+      actors: { find: () => null },
+      i18n: { localize: (key: string) => key },
+    };
+    (globalThis as any).foundry = { utils: { randomID: () => "ultimate-request-2" } };
+    const { ctx, flags, values } = ultimateContext();
+    await activateUltimate(ctx);
+
+    (globalThis as any).game.user = { id: "gm-1", isGM: true };
+    const adjudication = thargunnMythic.adjudications?.find((entry) => entry.id === "ultimate-transformation")!;
+    await thargunnMythic.hooks?.onAdjudicated?.(ctx, adjudication, "confirm");
+
+    expect(ctx.activateTransform).toHaveBeenCalledWith("tenth-march");
+    expect(flags.ultimateApprovalPending).toBe(false);
+    expect(flags.ultimateApprovalRequest).toBeNull();
+    expect(flags.ultimateReady).toBe(false);
+    expect(flags.ultimateActive).toBe(true);
+    expect(values.legendaryPoints).toBe(3);
+  });
+
+  it("denies a pending Ultimate without consuming it or changing form", async () => {
+    (globalThis as any).game = {
+      user: { id: "player-1", isGM: false },
+      users: { get: (id: string) => id === "player-1" ? { id } : null },
+      actors: { find: () => null },
+      i18n: { localize: (key: string) => key },
+    };
+    (globalThis as any).foundry = { utils: { randomID: () => "ultimate-request-3" } };
+    const { ctx, flags } = ultimateContext();
+    await activateUltimate(ctx);
+
+    (globalThis as any).game.user = { id: "gm-1", isGM: true };
+    const adjudication = thargunnMythic.adjudications?.find((entry) => entry.id === "ultimate-transformation")!;
+    await thargunnMythic.hooks?.onAdjudicated?.(ctx, adjudication, "deny");
+
+    expect(ctx.activateTransform).not.toHaveBeenCalled();
+    expect(flags.ultimateApprovalPending).toBe(false);
+    expect(flags.ultimateReady).toBe(true);
+    expect(flags.ultimateActive).toBe(false);
+  });
+
+  it("restores Ultimate state when the GM-side actor swap fails", async () => {
+    (globalThis as any).game = {
+      user: { id: "player-1", isGM: false },
+      users: { get: (id: string) => id === "player-1" ? { id } : null },
+      actors: { find: () => null },
+      i18n: { localize: (key: string) => key },
+    };
+    (globalThis as any).foundry = { utils: { randomID: () => "ultimate-request-4" } };
+    const { ctx, flags, values, setTransform } = ultimateContext();
+    await activateUltimate(ctx);
+    ctx.activateTransform = vi.fn(async () => { setTransform(null); throw new Error("swap failed"); });
+
+    (globalThis as any).game.user = { id: "gm-1", isGM: true };
+    const adjudication = thargunnMythic.adjudications?.find((entry) => entry.id === "ultimate-transformation")!;
+    await expect(thargunnMythic.hooks?.onAdjudicated?.(ctx, adjudication, "confirm")).rejects.toThrow("swap failed");
+
+    expect(flags.ultimateApprovalPending).toBe(false);
+    expect(flags.ultimateReady).toBe(true);
+    expect(flags.ultimateActive).toBe(false);
+    expect(values).toMatchObject({ fractures: 0, legendaryPoints: 0 });
   });
 
   it("repairs Echo Items on canonical Thar’gunn and removes Ultimate-form copies", async () => {

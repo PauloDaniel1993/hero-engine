@@ -271,6 +271,12 @@
       "Ultimate": {
         "Name": "A Marcha da Décima Lenda",
         "Action": "Ativar Ultimate",
+        "ApprovalTitle": "Aprovar a transformação da Ultimate",
+        "ApprovalHint": "O jogador concluiu o teste de acesso. Aprove para verificar novamente todos os pré-requisitos e executar a troca de ator do dnd5e no cliente do Mestre. Negue para não alterar nada.",
+        "ApprovalRequested": "solicita a aprovação do Mestre para a transformação da Ultimate. Nenhuma transformação ou uso por descanso longo foi aplicado ainda.",
+        "ApprovalMissing": "Esta solicitação da Ultimate está ausente ou não está mais pendente. Peça ao jogador para enviá-la novamente.",
+        "ApprovalInvalidOwner": "O usuário solicitante não é mais dono deste ator. A solicitação da Ultimate foi cancelada.",
+        "ActivationFailed": "A forma da Ultimate não pôde ser criada. Nenhum uso da Ultimate foi consumido.",
         "Blocked": "Pré-requisitos da Ultimate falharam",
         "AccessTitle": "Quem comanda a Décima Marcha?",
         "AccessBody": "Escolha Sabedoria ou Carisma para resistir ao Soberano Sem Nome.",
