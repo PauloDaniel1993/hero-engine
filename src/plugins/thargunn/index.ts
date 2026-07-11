@@ -42,21 +42,55 @@ async function silentSave(actor: any, ability: string, dc: number, advantage = f
 }
 
 interface EligibleFeature { opaqueId: string; label: string; category: string; description: string; spellLevel: number; }
+interface SiphonOpportunity { id: string; eventId: string; targetUuid: string; weaponUuid: string; activityUuid?: string; trigger: string; createdAt: number; expiresAt: number; worldTime: number; combatUuid?: string; round?: number; turn?: number; consumed?: boolean; }
 
-function eligibleFeatures(target: any): EligibleFeature[] {
+export function eligibleFeatures(target: any): EligibleFeature[] {
   const out: EligibleFeature[] = [];
   for (const item of target.items ?? []) {
-    const itemCategory = item.type === "spell" ? "spell" : item.type === "feat" ? "trait" : item.type === "class" || item.type === "subclass" ? "class-feature" : null;
+    const lowerName = String(item.name ?? "").toLowerCase();
+    const itemCategory = item.type === "spell" ? "spell" : item.type === "class" || item.type === "subclass" ? "class-feature"
+      : /multiattack/.test(lowerName) ? "multiattack" : /legendary action/.test(lowerName) ? "legendary-action"
+        : /lair action/.test(lowerName) ? "lair-action" : /recharge/.test(lowerName) ? "recharge" : item.type === "feat" ? "trait" : null;
     if (itemCategory) out.push({ opaqueId: `item:${item.id}`, label: item.name, category: itemCategory, description: String(item.system?.description?.value ?? "").replace(/<[^>]+>/g, " ").slice(0, 500), spellLevel: Number(item.system?.level ?? 0) });
     for (const activity of Object.values(item.system?.activities ?? {}) as any[]) {
       const type = activity.type;
-      const category = type === "spell" ? "spell" : type === "attack" ? "action" : type === "save" || type === "utility" ? "trait" : null;
+      const activityName = String(activity.name ?? item.name ?? "").toLowerCase();
+      const category = /legendary/.test(activityName) ? "legendary-action" : /lair/.test(activityName) ? "lair-action" : /multiattack/.test(activityName) ? "multiattack" : /recharge/.test(activityName) ? "recharge" : type === "spell" ? "spell" : type === "attack" ? "action" : type === "save" || type === "utility" ? "trait" : null;
       if (category) out.push({ opaqueId: `activity:${item.id}:${activity._id ?? activity.id}`, label: `${item.name}: ${activity.name ?? item.name}`, category, description: String(activity.description?.value ?? item.system?.description?.value ?? "").replace(/<[^>]+>/g, " ").slice(0, 500), spellLevel: Number(item.system?.level ?? 0) });
     }
   }
   const legendary = Number(target.system?.resources?.legact?.max ?? target.system?.resources?.legres?.max ?? 0);
   if (legendary > 0) out.push({ opaqueId: "trait:legendary-resistance", label: "Legendary Resistance", category: "legendary-resistance", description: "The creature can turn a failed saving throw into a success.", spellLevel: 0 });
+  const resistances = [...(target.system?.traits?.dr?.value ?? [])];
+  if (resistances.length) out.push({ opaqueId: "trait:resistances", label: "Damage Resistances", category: "resistance", description: resistances.join(", "), spellLevel: 0 });
+  const senses = Object.entries(target.system?.attributes?.senses ?? {}).filter(([, value]) => Number(value) > 0);
+  if (senses.length) out.push({ opaqueId: "trait:senses", label: "Special Senses", category: "sense", description: senses.map(([key, value]) => `${key} ${value}`).join(", "), spellLevel: 0 });
+  if (target.system?.attributes?.spellcasting) out.push({ opaqueId: "trait:spellcasting", label: "Spellcasting", category: "spell", description: "The creature's spellcasting group.", spellLevel: 0 });
   return out.slice(0, 80);
+}
+
+async function prepareOpportunity(ctx: MechanicContext, trigger: string, payload: TriggerPayload): Promise<SiphonOpportunity | null> {
+  const eventId = String(payload.data?.["eventId"] ?? "");
+  const targetUuid = String(payload.data?.["targetUuid"] ?? "");
+  const weaponUuid = String(payload.data?.["itemUuid"] ?? "");
+  if (!eventId || !targetUuid || !weaponUuid) return null;
+  const now = Date.now();
+  const current = (ctx.state.getFlag<SiphonOpportunity[]>("siphonOpportunities") ?? []).filter((entry) => entry.expiresAt > now).slice(-49);
+  const existing = current.find((entry) => entry.eventId === eventId && entry.targetUuid === targetUuid);
+  if (existing) return existing;
+  const opportunity: SiphonOpportunity = { id: `${eventId}:${targetUuid}`, eventId, targetUuid, weaponUuid, activityUuid: String(payload.data?.["activityUuid"] ?? "") || undefined, trigger, createdAt: now, expiresAt: now + 30_000, worldTime: Number(game.time?.worldTime ?? 0), combatUuid: game.combat?.uuid, round: game.combat?.round, turn: game.combat?.turn };
+  await ctx.state.setFlag("siphonOpportunities", [...current, opportunity]);
+  return opportunity;
+}
+
+async function consumeOpportunity(ctx: MechanicContext, opportunityId?: string): Promise<SiphonOpportunity | null> {
+  if (!opportunityId) return null;
+  const current = ctx.state.getFlag<SiphonOpportunity[]>("siphonOpportunities") ?? [];
+  const opportunity = current.find((entry) => entry.id === opportunityId);
+  if (!opportunity || opportunity.consumed || opportunity.expiresAt <= Date.now()) return null;
+  opportunity.consumed = true;
+  await ctx.state.setFlag("siphonOpportunities", current);
+  return opportunity;
 }
 
 async function chooseFeature(features: EligibleFeature[]): Promise<EligibleFeature | null> {
@@ -94,20 +128,24 @@ async function chooseCategory(): Promise<string | null> {
   return typeof result === "string" ? result : null;
 }
 
-async function offerSiphon(ctx: MechanicContext, target: any, eventId: string, temporaryOverride?: boolean, chosenCategory?: string): Promise<void> {
+async function offerSiphon(ctx: MechanicContext, target: any, eventId: string, temporaryOverride?: boolean, chosenCategory?: string, opportunityId?: string, featureOpaqueId?: string): Promise<void> {
   if (!game.user?.isGM) {
-    const category = chosenCategory ?? await chooseCategory();
+    const visibleFeatures = target.testUserPermission?.(game.user, "OBSERVER") ? eligibleFeatures(target) : [];
+    const visibleFeature = visibleFeatures.length ? await chooseFeature(visibleFeatures) : null;
+    const category = visibleFeature?.category ?? chosenCategory ?? await chooseCategory();
     if (!category) return;
-    await ctx.requestSecureTarget({ kind: "siphon", eventId, targetUuid: target.uuid, weaponUuid: weapon(ctx)?.uuid, category });
+    await ctx.requestSecureTarget({ kind: "siphon", eventId, targetUuid: target.uuid, weaponUuid: weapon(ctx)?.uuid, category, opportunityId, featureOpaqueId: visibleFeature?.opaqueId });
     await ctx.postChat(`${P}.Siphon.SentToGm`);
     return;
   }
+  if (opportunityId && !await consumeOpportunity(ctx, opportunityId)) return;
   const settled = ctx.state.getFlag<string[]>("settledSiphonEvents") ?? [];
   if (settled.includes(eventId)) return;
   await ctx.state.setFlag("settledSiphonEvents", [...settled.slice(-99), eventId]);
   const available = eligibleFeatures(target);
   const matching = chosenCategory ? available.filter((feature) => feature.category === chosenCategory) : available;
-  const feature = await chooseFeature(matching.length ? matching : available);
+  const requested = featureOpaqueId ? matching.find((feature) => feature.opaqueId === featureOpaqueId) : null;
+  const feature = requested ?? await chooseFeature(matching.length ? matching : available);
   if (!feature) {
     await ctx.postChat(`${P}.Siphon.NoFeature`);
     return;
@@ -450,7 +488,8 @@ const hooks = {
         await ctx.state.setFlag("siphonLockedUntilPowerfulKill", false);
         await removeManagedEffect(actorOf(ctx), "thargunn.effect.siphon-lock");
       }
-      if (target) await offerSiphon(ctx, target, String(payload.data?.["eventId"] ?? foundry.utils.randomID()));
+      const opportunity = await prepareOpportunity(ctx, trigger.id, payload);
+      if (target && opportunity && !opportunity.consumed) await offerSiphon(ctx, target, opportunity.eventId, undefined, undefined, opportunity.id);
       return;
     }
     if (trigger.id === "blood-hit") {
@@ -482,7 +521,9 @@ const hooks = {
       }
       const count = Number(ctx.state.getFlag<number>("ultimateSiphonsThisTurn") ?? 0);
       if (count < 1) {
-        await offerSiphon(ctx, target, `ultimate:${payload.data?.["eventId"] ?? foundry.utils.randomID()}`, true);
+        const eventId = `ultimate:${payload.data?.["eventId"] ?? foundry.utils.randomID()}`;
+        const opportunity = await prepareOpportunity(ctx, "ultimate-hit", { event: "attack-hit", data: { ...payload.data, eventId, targetUuid: target.uuid, itemUuid: item.uuid } });
+        if (opportunity) await offerSiphon(ctx, target, eventId, true, undefined, opportunity.id);
         await ctx.state.setFlag("ultimateSiphonsThisTurn", 1);
       }
     }
@@ -491,7 +532,9 @@ const hooks = {
     if (action.id === "siphon-manual") {
       const target = [...(game.user?.targets ?? [])][0]?.actor;
       if (!target) throw new Error(game.i18n.localize(`${P}.Errors.SelectTarget`));
-      await offerSiphon(ctx, target, `manual:${foundry.utils.randomID()}`);
+      const eventId = `manual:${foundry.utils.randomID()}`;
+      const opportunity = await prepareOpportunity(ctx, "manual", { event: "manual", data: { eventId, targetUuid: target.uuid, itemUuid: weapon(ctx)?.uuid } });
+      if (opportunity) await offerSiphon(ctx, target, eventId, undefined, undefined, opportunity.id);
     } else if (action.id === "field") {
       const charges = ctx.state.get("charges");
       if (charges < 1 || ctx.state.getFlag("fieldLocked")) throw new Error(game.i18n.localize(`${P}.Field.Unavailable`));
@@ -534,7 +577,9 @@ const hooks = {
     } else if (action.id === "second-siphon") {
       const target = [...(game.user?.targets ?? [])][0]?.actor;
       if (!target) throw new Error(game.i18n.localize(`${P}.Errors.SelectTarget`));
-      await offerSiphon(ctx, target, `ultimate-second:${foundry.utils.randomID()}`, true);
+      const eventId = `ultimate-second:${foundry.utils.randomID()}`;
+      const opportunity = await prepareOpportunity(ctx, "ultimate-second", { event: "manual", data: { eventId, targetUuid: target.uuid, itemUuid: weapon(ctx)?.uuid } });
+      if (opportunity) await offerSiphon(ctx, target, eventId, true, undefined, opportunity.id);
       await ctx.state.adjust("fractures", 1);
     } else if (action.id === "skeldr-rescue") {
       const target = [...(game.user?.targets ?? [])][0]?.actor;
@@ -607,7 +652,10 @@ const hooks = {
     }
   },
   async onSecureTargetRequest(ctx: MechanicContext, request: any, target: any) {
-    if (request.kind === "siphon") await offerSiphon(ctx, target, request.eventId, undefined, request.category);
+    const opportunity = (ctx.state.getFlag<SiphonOpportunity[]>("siphonOpportunities") ?? []).find((entry) => entry.id === request.opportunityId);
+    if (request.kind === "siphon" && opportunity && opportunity.eventId === request.eventId && opportunity.targetUuid === target.uuid && opportunity.weaponUuid === request.weaponUuid) {
+      await offerSiphon(ctx, target, request.eventId, undefined, request.category, request.opportunityId, request.featureOpaqueId);
+    }
   },
   async onTransformExpire(ctx: MechanicContext) { await finishUltimate(ctx); },
 };

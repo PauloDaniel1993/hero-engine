@@ -135,6 +135,8 @@ export interface SecureTargetRequest {
   targetUuid: string;
   weaponUuid?: string;
   category?: string;
+  opportunityId?: string;
+  featureOpaqueId?: string;
   createdAt?: number;
 }
 
