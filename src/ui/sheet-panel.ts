@@ -14,6 +14,7 @@ import { readState, resolveAttachments, type Attachment, type InstanceState } fr
 import { activeThresholds } from "../engine/trackers";
 import { escapeHtml } from "./chat-cards";
 import { createApp } from "./app-base";
+import { buildRecordRenderModel } from "./record-model";
 import { ensureAttachmentReady } from "../engine/records";
 
 export function registerSheetPanel(): void {
@@ -183,10 +184,12 @@ function renderMechanic(att: Attachment, plugin: MechanicPlugin, state: Instance
     let presentation: { search?: string; filter?: string } = {};
     try { presentation = JSON.parse(localStorage.getItem(presentationKey) ?? "{}"); } catch { /* ignore stale client data */ }
     const allSlots = [...snapshot.slots, ...snapshot.overflow];
+    const linkedIds = new Set<string>([...(att.canonicalActor.items ?? [])].flatMap((item: any) => item.getFlag?.("hero-engine", "managed")?.recordId ? [item.getFlag("hero-engine", "managed").recordId] : []));
+    const renderModel = buildRecordRenderModel(snapshot, ["echoes", "temporary-echoes"].includes(collection.id) ? linkedIds : undefined).filter((row) => row.kind === "slot");
     const rows = allSlots.map((slot, index) => {
       const overflow = index >= snapshot.slots.length;
-      const status = slot.blocked ? "blocked" : slot.record ? (slot.record.temporary ? "temporary" : "permanent") : "empty";
-      const missingLink = !!slot.record && ["echoes", "temporary-echoes"].includes(collection.id) && !att.canonicalActor.items?.some?.((item: any) => item.getFlag?.("hero-engine", "managed")?.recordId === slot.record!.id);
+      const status = renderModel[index]!.status;
+      const missingLink = renderModel[index]!.missingLink;
       const title = slot.record ? String(slot.record.data["name"] ?? slot.record.data["label"] ?? slot.record.id) : localize("HEROENGINE.Records.Empty");
       const details = slot.record ? Object.entries(slot.record.data).filter(([key]) => !["name", "label", "sourceOpaqueId", "sourceActorUuid"].includes(key)).map(([key, value]) => {
         const field = collection.fields.find((candidate) => candidate.key === key);
