@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.9 — 2026-07-11
+
+- Recover a player's persisted Ultimate approval request when the GM logs in
+  after the request was made, even when the original socket delivery was lost.
+- Deduplicate reconnect and live socket delivery so the GM receives exactly
+  one ruling for the same pending transformation.
+- Add an owner-accessible End transformation control to the Mechanics window;
+  the normal Ultimate expiry consequences still run during a manual return.
+
 ## 1.0.8 — 2026-07-11
 
 - Add rich action help cards after a 500 ms hover or keyboard focus, with the
