@@ -21,6 +21,120 @@ export type Archetype = "character" | "item";
  * Formulas containing dice (e.g. `"2d8 + 4"`) are rolled via Foundry's Roll.
  */
 export type NumberOrFormula = number | string;
+export type JsonPrimitive = string | number | boolean | null;
+export type JsonValue = JsonPrimitive | JsonValue[] | {
+    [key: string]: JsonValue;
+};
+export type RecordFieldType = "string" | "number" | "boolean" | "choice" | "json";
+export interface RecordFieldSchema {
+    key: string;
+    type: RecordFieldType;
+    labelKey: string;
+    required?: boolean;
+    choices?: string[];
+    min?: number;
+    max?: number;
+}
+export interface RecordLifecyclePolicy {
+    type: "permanent" | "world-time" | "combat-time" | "transform" | "manual";
+    /** Formula in seconds for world-time or turns for combat-time. */
+    duration?: NumberOrFormula;
+}
+export interface RecordActionDef {
+    id: string;
+    labelKey: string;
+    gmOnly?: boolean;
+    ownerOnly?: boolean;
+    destructive?: boolean;
+}
+/** A reusable slotted collection of structured records owned by one mechanic instance. */
+export interface RecordCollectionDef {
+    id: string;
+    labelKey: string;
+    descriptionKey?: string;
+    schemaVersion: number;
+    capacity: NumberOrFormula;
+    visibility?: "public" | "owner" | "gm";
+    fields: RecordFieldSchema[];
+    actions?: RecordActionDef[];
+    lifecycle?: RecordLifecyclePolicy;
+}
+export interface MechanicRecord {
+    id: string;
+    schemaVersion: number;
+    createdAt: number;
+    createdBy: string;
+    data: {
+        [key: string]: JsonValue;
+    };
+    temporary?: boolean;
+    lifecycle?: {
+        type: RecordLifecyclePolicy["type"];
+        worldTime?: number;
+        combatUuid?: string;
+        round?: number;
+        turn?: number;
+        combatantId?: string;
+        transformActivationId?: string;
+    };
+}
+export interface RecordSlot {
+    id: string;
+    record: MechanicRecord | null;
+    blocked?: {
+        reason: string;
+        at: number;
+        by: string;
+    } | null;
+}
+export interface PendingRecordReplacement {
+    id: string;
+    record: MechanicRecord;
+    createdAt: number;
+    expiresAt?: number;
+}
+export interface RecordCollectionSnapshot {
+    id: string;
+    schemaVersion: number;
+    capacity: number;
+    slots: RecordSlot[];
+    pending: PendingRecordReplacement[];
+    overflow: RecordSlot[];
+    recovery?: string;
+}
+export interface RecordCreateOptions {
+    temporary?: boolean;
+    lifecycle?: MechanicRecord["lifecycle"];
+    pendingWhenFull?: boolean;
+    idempotencyKey?: string;
+}
+export interface RecordAccessor {
+    list(collectionId: string): RecordCollectionSnapshot;
+    get(collectionId: string, recordId: string): MechanicRecord | null;
+    create(collectionId: string, data: {
+        [key: string]: JsonValue;
+    }, options?: RecordCreateOptions): Promise<MechanicRecord>;
+    update(collectionId: string, recordId: string, patch: {
+        [key: string]: JsonValue;
+    }, idempotencyKey?: string): Promise<MechanicRecord>;
+    remove(collectionId: string, recordId: string, idempotencyKey?: string): Promise<void>;
+    block(collectionId: string, slotId: string, reason: string): Promise<void>;
+    unblock(collectionId: string, slotId: string): Promise<void>;
+    expire(collectionId: string, recordId: string): Promise<void>;
+    replacePending(collectionId: string, pendingId: string, eraseRecordId: string): Promise<MechanicRecord>;
+    cancelPending(collectionId: string, pendingId: string): Promise<void>;
+    runAction(collectionId: string, recordId: string, actionId: string): Promise<void>;
+}
+export interface SecureTargetRequest {
+    kind: string;
+    eventId: string;
+    targetUuid: string;
+    weaponUuid?: string;
+    category?: string;
+    opportunityId?: string;
+    featureOpaqueId?: string;
+    createdAt?: number;
+}
 /** Normalized events dispatched by the engine's trigger bus. */
 export type EngineEvent = "attack-hit" | "crit-dealt" | "crit-received" | "reduced-to-zero" | "damage-taken" | "ally-downed" | "rest-short" | "rest-long" | "turn-start" | "turn-end" | "combat-round" | "world-time-advanced";
 /** A step on a tracker's ladder (e.g. Peso da Tempestade 1–6, Marcas de Fome 3/5/7/10). */
@@ -51,6 +165,8 @@ export interface RechargeRule {
     setTo?: number;
     /** i18n key of a yes/no question the GM confirms before `amount` applies ("under open sky?"). */
     conditionKey?: string;
+    /** Resolve the condition from a persisted mechanic flag without a GM prompt. */
+    conditionFlag?: string;
     /** Applied instead when the GM answers "no" (e.g. `"2d8 + 4"`). */
     fallbackAmount?: RechargeAmount;
 }
@@ -161,6 +277,12 @@ export interface ActionDef {
     /** ConsequenceTableDef id rolled when the action resolves. */
     table?: string;
     runHook?: boolean;
+    /**
+     * Post the engine's generic "used {action}" chat card after resolution.
+     * Defaults to true. Deferred workflows that only submit a GM ruling should
+     * disable this and post their completion message when the ruling resolves.
+     */
+    announceUse?: boolean;
 }
 export interface StanceDef {
     id: string;
@@ -187,6 +309,8 @@ export interface TransformExpireDef {
     table?: string;
     chatKey?: string;
     runHook?: boolean;
+    /** Also settle the expiry outcome when the form is ended manually. */
+    onManual?: boolean;
 }
 /** A timed full-body form (Ultimates, Avatar states). */
 export interface TransformDef {
@@ -293,13 +417,19 @@ export interface StateAccessor {
  * All engine services flow through this — plugins never touch engine internals.
  */
 export interface MechanicContext {
+    /** Actor currently executing the mechanic; may be a temporary dnd5e actor-swap form. */
     actor: ActorDoc;
+    /** Stable actor that owns character state and persistent document projections. */
+    canonicalActor: ActorDoc;
     /** Bound item for `item` archetype mechanics. */
     item?: ItemDoc;
     pluginId: string;
     /** Resolved config value (instance override -> world setting -> default). */
     config<T = unknown>(key: string): T;
     state: StateAccessor;
+    records: RecordAccessor;
+    /** Submit an owner-authored request that an active GM revalidates using the server-attributed update user. */
+    requestSecureTarget(request: SecureTargetRequest): Promise<void>;
     /** Deterministic formula evaluation with mechanic variables + actor roll data. */
     evalFormula(formula: NumberOrFormula): number;
     /** Roll dice (chat-visible) and return the total. */
@@ -343,6 +473,12 @@ export interface PluginRuntimeHooks {
     onTransformExpire?(ctx: MechanicContext, transform: TransformDef): void | Promise<void>;
     onAdjudicated?(ctx: MechanicContext, adjudication: AdjudicationDef, resultId: string): void | Promise<void>;
     onRecharge?(ctx: MechanicContext, resource: ResourceDef, rule: RechargeRule, applied: number): void | Promise<void>;
+    onRecordAction?(ctx: MechanicContext, collection: RecordCollectionDef, record: MechanicRecord, action: RecordActionDef): void | Promise<void>;
+    onRecordReplacement?(ctx: MechanicContext, collection: RecordCollectionDef, pending: MechanicRecord, erased: MechanicRecord): void | Promise<void>;
+    /** Idempotently reconcile Items, Activities, or other projections after stored records are ready. */
+    onRecordsReady?(ctx: MechanicContext): void | Promise<void>;
+    migrateRecord?(collectionId: string, record: MechanicRecord, fromVersion: number, toVersion: number): MechanicRecord;
+    onSecureTargetRequest?(ctx: MechanicContext, request: SecureTargetRequest, target: ActorDoc, trustedUserId: string): void | Promise<void>;
 }
 export interface MechanicPlugin {
     /** Unique kebab-case id, e.g. "presa-tempestade". */
@@ -364,6 +500,7 @@ export interface MechanicPlugin {
     transformations?: TransformDef[];
     tables?: ConsequenceTableDef[];
     adjudications?: AdjudicationDef[];
+    recordCollections?: RecordCollectionDef[];
     configSchema?: ConfigFieldDef[];
     hooks?: PluginRuntimeHooks;
 }
@@ -380,6 +517,20 @@ export interface HeroEngineAPI {
     detach(actor: ActorDoc, pluginId: string): Promise<void>;
     /** Context for an attached instance, or null if not attached. */
     contextFor(actor: ActorDoc, pluginId: string): MechanicContext | null;
+    /** Stable macro helper: open the standalone Mechanics window for an actor. */
+    openMechanics(actor: ActorDoc): unknown;
+    /** Stable macro helper: run one declared action without importing engine internals. */
+    runAction(actor: ActorDoc, pluginId: string, actionId: string): Promise<void>;
+    /** Preview or execute the built-in Thar’gunn managed-content reconciliation. */
+    previewThargunnInstall(options?: {
+        baseActorId?: string;
+        ultimateActorId?: string;
+    }): Promise<unknown>;
+    installThargunn(options?: {
+        baseActorId?: string;
+        ultimateActorId?: string;
+        dryRun?: boolean;
+    }): Promise<unknown>;
     /** Version of the engine contract, for plugin compatibility checks. */
     readonly apiVersion: string;
 }

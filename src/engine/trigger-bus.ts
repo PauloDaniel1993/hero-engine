@@ -17,6 +17,7 @@ import { isAuthoritativeClient, onSocketMessage } from "./sockets";
 import { resolveAttachment, resolveAttachments } from "./state";
 import { endTransform, tickTransform } from "./transforms";
 import { enqueueDirect } from "./adjudications";
+import { convertTemporaryRecord, ensureAttachmentReady } from "./records";
 
 /** Dispatch one engine event to every subscribed mechanic on an actor. */
 export async function dispatchEvent(actor: any, event: EngineEvent, data?: Record<string, unknown>): Promise<void> {
@@ -51,45 +52,70 @@ function combatAllies(actor: any): any[] {
 
 export function initTriggerBus(): void {
   const compat = getCompat();
+  const hpBeforeUpdate = new Map<string, number>();
+  const midiKills = new Set<string>();
 
   // --- Attack outcomes (fire on the rolling client) --------------------------
-  compat.onAttackResult(async ({ attacker, target, isCrit, isHit }) => {
-    if (isHit) await dispatchEvent(attacker, "attack-hit", { targetUuid: target?.uuid });
+  compat.onAttackResult(async ({ attacker, target, isCrit, isHit, eventId, itemUuid, activityUuid }) => {
+    const attackData = { targetUuid: target?.uuid, eventId, itemUuid, activityUuid };
+    if (isHit) await dispatchEvent(attacker, "attack-hit", attackData);
     if (isCrit) {
-      await dispatchEvent(attacker, "crit-dealt", { targetUuid: target?.uuid });
-      if (target) await dispatchEvent(target, "crit-received", { attackerUuid: attacker?.uuid });
+      await dispatchEvent(attacker, "crit-dealt", attackData);
+      if (target) await dispatchEvent(target, "crit-received", { attackerUuid: attacker?.uuid, eventId, itemUuid, activityUuid });
     }
   });
 
   // --- Rests (fire on the initiating client) --------------------------------
-  compat.onRestCompleted(async ({ actor, kind }) => {
+  compat.onRestCompleted(async ({ actor, kind, eventId }) => {
     await handleRest(actor, kind);
-    await dispatchEvent(actor, kind);
+    await dispatchEvent(actor, kind, { eventId });
+  });
+
+  Hooks.on("midi-qol.RollComplete", async (workflow: any) => {
+    if (!isAuthoritativeClient()) return;
+    const attacker = workflow?.actor;
+    const item = workflow?.item;
+    if (!attacker || !item) return;
+    const eventId = String(workflow.uuid ?? workflow.id ?? workflow.itemCardId ?? foundry.utils.randomID());
+    for (const damage of workflow.damageList ?? []) {
+      const oldHp = Number(damage.oldHP ?? damage.oldHp ?? NaN);
+      const newHp = Number(damage.newHP ?? damage.newHp ?? NaN);
+      if (!Number.isFinite(oldHp) || !Number.isFinite(newHp) || oldHp <= 0 || newHp > 0) continue;
+      const target = damage.actor ?? game.actors?.get?.(damage.actorId) ?? damage.token?.actor;
+      const key = `${eventId}:${target?.uuid ?? damage.tokenId}`;
+      if (!target || midiKills.has(key)) continue;
+      midiKills.add(key);
+      if (midiKills.size > 200) midiKills.delete(midiKills.values().next().value!);
+      await dispatchEvent(attacker, "reduced-to-zero", { eventId, targetUuid: target.uuid, itemUuid: item.uuid, activityUuid: workflow.activity?.uuid });
+    }
   });
 
   // --- HP watching: damage-taken, ally-downed, reduced-to-zero ---------------
+  Hooks.on("preUpdateActor", (actor: any, changes: any) => {
+    if (foundry.utils.getProperty(changes, "system.attributes.hp.value") === undefined) return;
+    const current = actor.system?.attributes?.hp?.value;
+    if (typeof current === "number") hpBeforeUpdate.set(actor.uuid, current);
+  });
   Hooks.on("updateActor", async (actor: any, changes: any, _options: any, _userId: string) => {
     if (!isAuthoritativeClient()) return;
     const newHp = foundry.utils.getProperty(changes, "system.attributes.hp.value");
     if (newHp === undefined) return;
-    const prevHp = actor._heroEnginePrevHp ?? actor.system?.attributes?.hp?.value;
-    actor._heroEnginePrevHp = newHp;
+    const prevHp = hpBeforeUpdate.get(actor.uuid);
+    hpBeforeUpdate.delete(actor.uuid);
 
     if (typeof prevHp === "number" && newHp < prevHp) {
       await dispatchEvent(actor, "damage-taken", { amount: prevHp - newHp });
     }
     if (newHp <= 0 && (typeof prevHp !== "number" || prevHp > 0)) {
+      for (const effect of actor.effects ?? []) {
+        const suppressionId = effect.getFlag?.("hero-engine", "suppressionId");
+        if (suppressionId) await convertTemporaryRecord(suppressionId);
+      }
       // Allies of the downed actor:
       for (const ally of combatAllies(actor)) {
         await dispatchEvent(ally, "ally-downed", { downedUuid: actor.uuid, downedName: actor.name });
       }
-      // Credit the current combatant with reduced-to-zero when it's an enemy drop.
-      const current = game.combat?.combatant?.actor;
-      const currentDisp = game.combat?.combatant?.token?.disposition;
-      const downedDisp = game.combat?.combatants?.find((c: any) => c.actor?.id === actor.id)?.token?.disposition;
-      if (current && current.id !== actor.id && currentDisp !== undefined && currentDisp !== downedDisp) {
-        await dispatchEvent(current, "reduced-to-zero", { targetUuid: actor.uuid });
-      }
+      // Kill credit needs a correlated damage workflow; never infer it from the current combatant.
     }
   });
 
@@ -97,6 +123,14 @@ export function initTriggerBus(): void {
   Hooks.on("updateCombat", async (combat: any, changes: any, _options: any, _userId: string) => {
     if (!isAuthoritativeClient()) return;
     if (changes.turn === undefined && changes.round === undefined) return;
+
+    for (const combatant of combat.combatants ?? []) {
+      for (const att of resolveAttachments(combatant.actor)) {
+        const plugin = getPlugin(att.pluginId);
+        const ctx = plugin ? makeContext(att) : null;
+        if (plugin && ctx) await ensureAttachmentReady(att, plugin, () => ctx);
+      }
+    }
 
     const previous = combat.previous;
     const prevCombatant = previous?.combatantId ? combat.combatants.get(previous.combatantId) : null;
@@ -133,6 +167,11 @@ export function initTriggerBus(): void {
     await handleWorldTime(prev, worldTime);
     for (const actor of game.actors ?? []) {
       if (resolveAttachments(actor).length) {
+        for (const att of resolveAttachments(actor)) {
+          const plugin = getPlugin(att.pluginId);
+          const ctx = plugin ? makeContext(att) : null;
+          if (plugin && ctx) await ensureAttachmentReady(att, plugin, () => ctx);
+        }
         await dispatchEvent(actor, "world-time-advanced", { worldTime, dt });
       }
     }

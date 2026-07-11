@@ -22,5 +22,6 @@ declare const Roll: any;
 declare const ChatMessage: any;
 declare const Actor: any;
 declare const Item: any;
+declare const Macro: any;
 declare const ActiveEffect: any;
 declare const Dialog: any;

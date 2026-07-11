@@ -1,0 +1,20 @@
+[
+  {
+    "_id": "TgOpenMechanic01",
+    "name": "Thar’gunn — Mecânicas",
+    "type": "script",
+    "img": "modules/hero-engine/assets/thargunn/icons/echo-trait.webp",
+    "command": "const a = canvas.tokens.controlled[0]?.actor ?? game.user.character; game.modules.get(\"hero-engine\").api.openMechanics(a);",
+    "ownership": { "default": 2 },
+    "flags": { "hero-engine": { "managed": { "key": "thargunn.macro.open", "contentVersion": 1, "templateVersion": 1, "sourceHash": "pack-v1" } } }
+  },
+  {
+    "_id": "TgSiphonMacro001",
+    "name": "Thar’gunn — Sifão",
+    "type": "script",
+    "img": "modules/hero-engine/assets/thargunn/icons/echo-trait.webp",
+    "command": "const a = canvas.tokens.controlled[0]?.actor ?? game.user.character; await game.modules.get(\"hero-engine\").api.runAction(a,\"thargunn-mythic\",\"siphon-manual\");",
+    "ownership": { "default": 2 },
+    "flags": { "hero-engine": { "managed": { "key": "thargunn.macro.siphon", "contentVersion": 1, "templateVersion": 1, "sourceHash": "pack-v1" } } }
+  }
+]

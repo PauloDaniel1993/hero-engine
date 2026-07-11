@@ -4,6 +4,20 @@
       "DawnHour": {
         "Name": "Hora do amanhecer",
         "Hint": "Hora do tempo de jogo (0-23) em que recargas 'ao amanhecer' acontecem. Padrão 6."
+      },
+      "BackupEvidence": {
+        "Name": "Evidência de backup verificado",
+        "Hint": "Obrigatório antes da instalação gerenciada de atores: informe um caminho de backup, ID de snapshot ou registro de checksum."
+      },
+      "Theme": {
+        "Name": "Tema do Hero Engine",
+        "Hint": "Tema visual padrão do mundo; cada cliente pode substituir localmente.",
+        "ClientName": "Substituição do tema do Hero Engine",
+        "ClientHint": "Use o tema do mundo ou escolha um tema apenas para este navegador.",
+        "WorldDefault": "Usar padrão do mundo",
+        "Basalt": "Basalto e trovão",
+        "Storm": "Tempestade profunda",
+        "Gold": "Ouro roubado"
       }
     },
     "Socket": {
@@ -11,10 +25,32 @@
       "QueueDrained": "{count} pedido(s) do Hero Engine entregue(s) ao Mestre."
     },
     "GMConfirm": { "Title": "Hero Engine — confirmação do Mestre" },
+    "Dialog": {
+      "ConfirmSubtitle": "Revise esta solicitação antes de continuar.",
+      "ChooseSubtitle": "Escolha uma opção para continuar.",
+      "ChooseHint": "Selecione uma opção",
+      "InputSubtitle": "Digite um valor e aplique a alteração.",
+      "Cancel": "Cancelar",
+      "Confirm": "Confirmar",
+      "Apply": "Aplicar alteração"
+    },
+    "ActionTooltip": {
+      "Action": "Ação do Hero Engine",
+      "Available": "Disponível",
+      "Unavailable": "Indisponível",
+      "Cost": "Custo",
+      "NoCost": "Sem custo de recurso",
+      "WhyUnavailable": "Por que está indisponível",
+      "Ready": "Pronta para usar",
+      "HoverHint": "Exibido após manter o cursor por 500 ms",
+      "NoDescription": "Use {action} por esta mecânica."
+    },
     "Errors": {
       "GMOnly": "Apenas o Mestre pode fazer isso.",
       "NotOwner": "Você não é dono deste personagem.",
       "Unavailable": "Esta ação não está disponível agora.",
+      "RequiresState": "Um estado obrigatório da mecânica não está ativo.",
+      "ForbiddenState": "O estado atual da mecânica bloqueia esta ação.",
       "OnCooldown": "Em recarga ({remaining}).",
       "NotEnough": "{resource} insuficiente.",
       "AlreadyTransformed": "Já existe uma transformação ativa.",
@@ -50,30 +86,70 @@
       "Rebound": "{mechanic} agora acompanha seu item com {actor}."
     },
     "Panel": {
+      "EngineName": "Hero Engine",
       "Title": "Mecânicas",
+      "Open": "Abrir mecânicas do Hero Engine",
+      "Subtitle": "Poderes épicos, recursos e estados ativos",
       "Transform": "Forma ativa",
+      "EndTransform": "Encerrar transformação",
       "RoundsLeft": "{rounds} rodada(s) restante(s)",
+      "Character": "Personagem",
+      "ActiveState": "Estados ativos",
+      "Actions": "Ações",
       "ManualTriggers": "Gatilhos manuais"
     },
     "Stance": { "None": "— nenhuma —" },
     "Config": {
       "Save": "Salvar",
+      "Cancel": "Cancelar",
       "Saved": "Configuração salva.",
       "WorldTitle": "Configuração do mundo",
+      "WorldSubtitle": "Defina o equilíbrio e o comportamento padrão desta mecânica.",
       "OverrideTitle": "Ajustes por personagem",
+      "OverrideSubtitle": "Personalize esta mecânica para um personagem específico.",
+      "General": "Geral",
+      "Options": "{count} opções",
       "OverrideThis": "Sobrescrever este campo",
       "Clear": "Limpar"
+    },
+    "ItemPicker": {
+      "Title": "Escolha um item",
+      "Subtitle": "Selecione o item de {actor} que receberá esta mecânica.",
+      "SearchPlaceholder": "Buscar itens por nome…",
+      "ItemsFound": "{count} itens",
+      "FilterBy": "Filtrar por categoria de item",
+      "Gear": "Equipamento",
+      "All": "Todos",
+      "Spells": "Magias",
+      "Features": "Características",
+      "Other": "Outros",
+      "NoResults": "Nenhum item encontrado",
+      "TryAnother": "Tente outro nome ou limpe a busca.",
+      "SelectPrompt": "Selecione um item para continuar",
+      "Selected": "Selecionado",
+      "Item": "Item",
+      "Cancel": "Cancelar",
+      "Save": "Salvar vínculo"
     },
     "GMPanel": {
       "MenuName": "Painel do Mestre",
       "MenuLabel": "Abrir painel",
       "MenuHint": "Todas as mecânicas vinculadas: marcadores, recargas, transformações e decisões pendentes.",
+      "ToolbarTitle": "Abrir o Painel do Mestre do Hero Engine",
       "Title": "Hero Engine — Painel do Mestre",
       "Adjudications": "Decisões pendentes",
       "NoAdjudications": "Nada aguardando decisão.",
+      "RulingsHint": "Revise decisões que exigem aprovação do Mestre.",
       "Attach": "Vincular uma mecânica",
       "AttachButton": "Vincular",
+      "AttachHint": "Escolha um personagem e o conjunto de regras.",
+      "SearchActors": "Buscar personagens por nome…",
+      "Actor": "Personagem ou NPC",
+      "Mechanic": "Mecânica",
+      "Available": "{count} disponível(is)",
+      "NoActorsFound": "Nenhum personagem corresponde à busca.",
       "Attachments": "Mecânicas vinculadas",
+      "AttachmentsHint": "Acompanhe recursos, recargas e transformações.",
       "None": "Nenhuma mecânica vinculada ainda.",
       "NoItems": "Esse personagem não tem itens para vincular.",
       "PickItem": "Vincular a qual item?",
@@ -81,9 +157,226 @@
       "EndTransform": "Encerrar transformação",
       "Overrides": "Ajustes",
       "WorldConfig": "Configuração do mundo",
+      "ConfigHint": "Ajuste as regras padrão de cada mecânica registrada.",
+      "Registered": "Registradas",
       "AdjustHint": "Clique para ajustar (digite ex.: \"-2 gasto no ritual\")",
       "AdjustTitle": "Ajustar valor",
       "AdjustLabel": "Delta e motivo para {id} (ex.: \"-2 gasto no ritual\"):"
+    },
+    "Records": {
+      "Search": "Buscar registros…",
+      "All": "Todos",
+      "Permanent": "Permanente",
+      "Temporary": "Temporário",
+      "Blocked": "Bloqueado",
+      "Empty": "Espaço vazio",
+      "Overflow": "Excedente"
+      ,"Pending": "Captura pendente"
+      ,"PendingHint": "Todos os espaços utilizáveis estão cheios. Escolha o Eco a apagar ou cancele esta captura."
+      ,"Replace": "Apagar e substituir"
+      ,"Cancel": "Cancelar captura"
+      ,"MissingLink": "Reparo necessário"
+      ,"MissingLinkHint": "A atividade dnd5e vinculada está ausente. Usar este registro a reconstrói a partir dos dados autoritativos."
+    },
+    "Thargunn": {
+      "Name": "Thar’gunn — A Décima Vida",
+      "Description": "O Ladrão da Décima Vida, Ecos Ocos, Fome, Skeldr e a Marcha da Décima Lenda.",
+      "Trackers": {
+        "WeaponLevel": "Nível da arma",
+        "HungerTemporary": "Fome temporária",
+        "HungerPermanent": "Fome permanente",
+        "HungerTotal": "Fome / Peso da Lenda",
+        "EssenceDebt": "Dívida de Essência",
+        "Legends": "Lendas Gravadas",
+        "Fractures": "Fraturas de Nome"
+      },
+      "Resources": { "Charges": "Cargas da Décima Vida", "LegendaryPoints": "Pontos Lendários" },
+      "ActionDescriptions": {
+        "Siphon": "Escolha uma criatura como alvo e tente roubar uma característica elegível como Eco Oco.",
+        "Field": "Gaste todas as Cargas da Décima Vida restantes para criar o Campo móvel até sua duração terminar.",
+        "FieldExit": "Resolva o teste de Força quando um inimigo tentar sair do Campo ativo.",
+        "Ultimate": "Solicite a Marcha da Décima Lenda. O pedido de um jogador aguarda aprovação do Mestre antes da troca de ator.",
+        "Rite": "Tente os três testes de CD 25 do Rito da Décima Lenda.",
+        "Purify": "Escolha uma consequência persistente de Fome, Dívida, espaço de Eco, Skeldr ou Fratura para reparar.",
+        "SkeldrMove": "Gaste 1 Ponto Lendário para Skeldr mover 60 pés e preparar Passo Trovejante após 20 pés.",
+        "MightyImpel": "Gaste 1 Ponto Lendário para usar Impulso Poderoso contra uma criatura Enorme ou menor.",
+        "DevastatingStrike": "Gaste 2 Pontos Lendários para realizar o ataque provisório de força e trovão.",
+        "LegendaryEcho": "Gaste 2 Pontos Lendários para manifestar um Eco Oco armazenado.",
+        "SecondSiphon": "Gaste 3 Pontos Lendários para tentar um segundo Sifão da Décima Vida neste turno.",
+        "SkeldrRescue": "Gaste 3 Pontos Lendários para Skeldr preservar um aliado caído com 1 PV.",
+        "HungerGuard": "Uma vez por descanso curto, Skeldr impede um ponto de Fome.",
+        "EarlyReturn": "Grave uma Lenda protetora para chamar um Skeldr ausente de volta mais cedo.",
+        "RecordLegend": "Grave o nome e o feito de uma Lenda mítica."
+      },
+      "Availability": {
+        "FieldInactive": "O Campo da Décima Marca precisa estar ativo.",
+        "UltimateRest": "A Ultimate já foi gasta; termine um descanso longo para restaurá-la.",
+        "ApprovalPending": "O pedido da Ultimate está aguardando a decisão do Mestre.",
+        "UltimateInactive": "A Marcha da Décima Lenda precisa estar ativa.",
+        "TakeoverLocked": "O Soberano Sem Nome controla o primeiro turno da Ultimate.",
+        "SkeldrAbsent": "Skeldr está ausente e não pode proteger Thar’gunn.",
+        "GuardSpent": "Skeldr já impediu Fome durante este descanso curto.",
+        "SkeldrPresent": "Skeldr já está presente; um retorno antecipado é desnecessário."
+      },
+      "Hunger": {
+        "T3": "O sussurro da arma",
+        "T5": "Exigência predatória",
+        "T7": "Teste de controle",
+        "T10": "Fratura do nome verdadeiro",
+        "PermanentRuling": "Tornar permanente uma Marca de Fome deste Eco mítico?",
+        "CruelDemand": "A arma exige um ato cruel ou predatório.",
+        "ControlLoss": "Thar’gunn falhou no teste de controle e pode perder um turno.",
+        "NameFragment": "O Soberano Sem Nome tenta tomar um fragmento do nome verdadeiro de Thar’gunn.",
+        "WeightDemand": "O Peso da Lenda exige um fardo autoimposto digno do poder usado.",
+        "WeightControl": "Thar’gunn deve escolher uma restrição lendária custosa neste turno.",
+        "MemoryDistortion": "O Peso da Lenda apaga ou distorce uma memória importante; o Soberano não pode assumir o controle."
+      },
+      "Debt": { "T3": "O Soberano fala", "T5": "Substituição da alma" },
+      "Recharge": { "BloodQuestion": "A arma provou sangue vivo desde o amanhecer anterior?", "BloodHit": "Sangue vivo provado" },
+      "Echo": {
+        "Permanent": "Ecos Ocos permanentes",
+        "PermanentHint": "Habilidades capturadas de criaturas que morreram antes do roubo expirar.",
+        "Temporary": "Ecos Ocos temporários",
+        "TemporaryHint": "Habilidades roubadas que expiram em dez rodadas, salvo se a fonte morrer.",
+        "Name": "Nome do Eco",
+        "Category": "Categoria",
+        "Tier": "Escala de poder",
+        "Cost": "Custo em cargas",
+        "SoulDamage": "Dano na alma",
+        "SoulDamageFlavor": "Dano na alma do Eco Oco",
+        "Description": "Forma corrompida jogável",
+        "Source": "Fonte opaca",
+        "Use": "Usar Eco",
+        "Erase": "Apagar",
+        "None": "Nenhum Eco Oco permanente está disponível.",
+        "Used": "{echo} rasga a alma de Thar’gunn e se manifesta.",
+        "ErasureFailed": "O apagamento falha (CD {dc}): {result}",
+        "ErasureTable": "Preço do apagamento",
+        "Erasure1": "6d10 de dano psíquico.",
+        "Erasure2": "Perde um Dado de Vida até Restauração Maior.",
+        "Erasure3": "Desvantagem em testes de morte até o próximo descanso longo.",
+        "Erasure4": "A habilidade apagada se manifesta uma vez contra Thar’gunn.",
+        "Erasure5": "A arma recusa novo roubo até uma criatura poderosa ser morta.",
+        "Erasure6": "Ganha uma Dívida de Essência."
+      },
+      "Legends": { "Collection": "Lendas Gravadas nomeadas", "Name": "Nome da lenda", "Description": "O que tornou o feito mítico", "Add": "Gravar uma Lenda nomeada" },
+      "Skeldr": {
+        "GuardAction": "Skeldr impede uma Fome",
+        "GuardUnavailable": "Skeldr está ausente ou já protegeu contra Fome neste descanso curto.",
+        "Guarded": "O trovão de Skeldr firma Thar’gunn e impede uma Fome.",
+        "EarlyReturn": "Retornar Skeldr por uma Lenda protetora",
+        "EarlyLegend": "O trovão respondeu cedo",
+        "EarlyLegendHint": "Um feito protetor chamou Skeldr antes do dia marcado.",
+        "Defeated": "Skeldr se desfaz em trovão e retornará em {days} dia(s).",
+        "Returned": "Skeldr retorna do trovão com força total."
+      },
+      "Siphon": {
+        "Action": "Sifão de Essência",
+        "PickTitle": "Escolha o Eco Oco",
+      "PickHint": "Selecione a característica cuja identidade a arma tentará roubar.",
+      "Search": "Buscar características elegíveis…",
+      "Filter": "Filtrar por categoria de Eco",
+      "AllCategories": "Todas as categorias",
+      "Available": "disponíveis",
+      "Select": "Roubar característica selecionada",
+      "SpellLevel": "nível",
+      "Redacted": "Os detalhes permanecem ocultos até o Mestre validar a captura.",
+      "NoMatches": "Nenhuma característica corresponde à busca.",
+        "CategoryTitle": "Que tipo de identidade a arma deve buscar?",
+        "CategoryHint": "Escolha uma categoria redigida. O Mestre validará o alvo privado e a característica elegível.",
+        "SentToGm": "O pedido de Sifão foi enviado para validação autoritativa do Mestre.",
+        "NoFeature": "Nenhuma característica suportada estava elegível para captura.",
+        "TooStrong": "{echo} é um Eco {tier}, além do limite atual {maxTier} da arma.",
+        "Resisted": "{target} resiste ao Sifão ({total} contra CD {dc}).",
+        "Captured": "{echo} é arrancado de {target} e se torna um Eco Oco.",
+        "Suppressed": "Identidade Sifonada",
+        "SuppressedUse": "Essa habilidade está temporariamente suprimida pelo Ladrão da Décima Vida.",
+        "GmTitle": "Validar Sifão privado",
+        "GmHint": "Revalide dono, alvo, arma, gatilho e característica sem revelar dados privados."
+      },
+      "Categories": {
+        "trait": "Traço", "action": "Ação", "reaction": "Reação", "resistance": "Resistência", "sense": "Sentido",
+        "multiattack": "Multiataque", "recharge": "Recarga", "legendary-resistance": "Resistência Lendária",
+        "legendary-action": "Ação Lendária", "lair-action": "Ação de Covil", "spell": "Magia", "class-feature": "Característica de classe",
+        "divine": "Poder divino", "artifact": "Poder de artefato", "core": "Identidade central"
+      },
+      "Field": {
+        "Action": "Campo da Décima Marcha",
+        "ExitAction": "Resolver inimigo saindo do Campo",
+        "Rooted": "Reivindicado pela Décima Marcha",
+        "ExitFailed": "{target} falha na resistência de Força CD {dc}; seu deslocamento se torna 0 neste turno.",
+        "Unavailable": "O Campo exige ao menos uma carga e só retorna após descanso longo.",
+        "Activated": "O Campo consome {charges} cargas; uma marcha de 165 pés de terra roubada segue Thar’gunn.",
+        "Expiry": "Reconciliação da duração do Campo"
+      },
+      "Ultimate": {
+        "Name": "A Marcha da Décima Lenda",
+        "Action": "Ativar Ultimate",
+        "ApprovalTitle": "Aprovar a transformação da Ultimate",
+        "ApprovalHint": "O jogador concluiu o teste de acesso. Aprove para verificar novamente todos os pré-requisitos e executar a troca de ator do dnd5e no cliente do Mestre. Negue para não alterar nada.",
+        "ApprovalRequested": "solicita a aprovação do Mestre para a transformação da Ultimate. Nenhuma transformação ou uso por descanso longo foi aplicado ainda.",
+        "ApprovalMissing": "Esta solicitação da Ultimate está ausente ou não está mais pendente. Peça ao jogador para enviá-la novamente.",
+        "ApprovalInvalidOwner": "O usuário solicitante não é mais dono deste ator. A solicitação da Ultimate foi cancelada.",
+        "ActivationFailed": "A forma da Ultimate não pôde ser criada. Nenhum uso da Ultimate foi consumido.",
+        "Blocked": "Pré-requisitos da Ultimate falharam",
+        "AccessTitle": "Quem comanda a Décima Marcha?",
+        "AccessBody": "Escolha Sabedoria ou Carisma para resistir ao Soberano Sem Nome.",
+        "ExpiryDamage": "Acerto de contas das Fraturas de Nome",
+        "Ended": "A Décima Marcha termina e cada nome roubado exige seu preço.",
+        "SkeldrEnhancement": "Ultimate: deslocamento de 120 pés, ignora terreno difícil e não provoca ataques de oportunidade.",
+        "GmChoosesFirstEcho": "O Mestre deve escolher o primeiro Eco Oco da Marcha Usurpada.",
+        "GmChoosesFirstEchoHint": "Escolha qual Eco armazenado o Soberano Sem Nome força Thar’gunn a manifestar.",
+        "FirstTurnTakeover": "1 natural: o Soberano Sem Nome controla o primeiro turno da Ultimate.",
+        "BlockSlot": "Escolha um espaço de Eco para bloquear por Fratura de Nome",
+        "IdentityRuling": "Resolva o fragmento de identidade perdido em dez Fraturas"
+        ,"ThunderousStep": "Passo Trovejante de Skeldr"
+        ,"ThunderousDamage": "Dano do Passo Trovejante"
+        ,"ThunderousFailed": "{target} é arremessado 60 pés, cai no chão e perde reações."
+        ,"SkeldrMove": "Skeldr se move 60 pés"
+        ,"SkeldrMoves": "Skeldr avança {distance} pés e arma o Passo Trovejante."
+        ,"MightyImpelAction": "Mighty Impel"
+        ,"MightyImpel": "Thar’gunn usa Mighty Impel contra criatura Enorme ou menor."
+        ,"DevastatingStrike": "Golpe Devastador"
+        ,"DevastatingDamage": "Dano provisório do Golpe Devastador"
+        ,"LegendaryEcho": "Usar um Eco Oco"
+        ,"SecondSiphon": "Segundo Sifão da Décima Vida"
+        ,"SkeldrRescue": "Skeldr preserva um aliado com 1 PV"
+      },
+      "Rite": {
+        "Action": "Rito da Décima Lenda",
+        "NeedsLegends": "O rito exige dez Lendas Gravadas nomeadas.",
+        "Success": "Thar’gunn nomeia a si mesmo. A arma responde à lenda, não ao Soberano.",
+        "Failure": "O rito falha: duas Dívidas de Essência e um espaço de Eco bloqueado.",
+        "BlockSlot": "Escolha o espaço de Eco bloqueado pelo rito fracassado",
+        "NameEscalation": "Dois 1 naturais: resolva a tentativa imediata de tomar o nome verdadeiro"
+      },
+      "Purification": {
+        "Action": "Purificação e recuperação",
+        "Title": "Escolha o que a purificação repara",
+        "Hint": "Toda recuperação é seletiva, reversível e registrada.",
+        "hunger": "Remover Fome permanente",
+        "debt": "Limpar Dívida de Essência",
+        "slot": "Desbloquear espaço de Eco",
+        "skeldr": "Retornar Skeldr",
+        "fracture": "Reparar PV máximos de Fratura"
+      },
+      "Triggers": { "LongRest": "Recuperação de descanso longo", "ShortRest": "Recuperação de descanso curto", "TurnStart": "Início do turno da Ultimate", "TurnEnd": "Fim do turno da Ultimate" },
+      "Errors": { "NotEnoughCharges": "Cargas da Décima Vida insuficientes.", "SelectTarget": "Selecione uma criatura como alvo primeiro." },
+      "Config": {
+        "Siphon": "Sifão e Ecos",
+        "SiphonBaseDc": "CD base do Sifão",
+        "TemporarySeconds": "Duração do Eco temporário (segundos)",
+        "Field": "Campo da Décima Marcha",
+        "FieldRadius": "Raio do Campo (pés)",
+        "FieldSeconds": "Duração do Campo (segundos)",
+        "Ultimate": "Ultimate nativa nível 20",
+        "UltimateRounds": "Turnos da Ultimate",
+        "StrikeDamage": "Dados provisórios do Golpe Devastador",
+        "Skeldr": "Skeldr",
+        "SkeldrReturn": "Dias para retorno de Skeldr",
+        "Rite": "Rito e recuperação",
+        "RiteDc": "CD dos testes do rito"
+      }
     }
   }
 }

@@ -11,6 +11,7 @@ import type {
   PromptDef,
   PromptOutcome,
   PromptResult,
+  SecureTargetRequest,
   StateOp,
   TriggerDef,
   TriggerPayload,
@@ -37,10 +38,21 @@ import {
 } from "./state";
 import type { Bounds } from "./trackers";
 import { applyDelta, thresholdsCrossed } from "./trackers";
+import { makeRecordAccessor } from "./records";
+import { notifyMechanicSettled } from "./events";
 
 /** Cooldown sentinels stored in state.cooldowns. */
 const CD_READY = -1;
 const CD_SPENT = -2; // waiting for a rest/dawn event
+
+/** Foundry dot-path updates used for owner-authored, server-attributed requests. */
+export function secureRequestUpdate(requestId: string, pluginId: string, request: SecureTargetRequest, createdAt = Date.now()): Record<string, unknown> {
+  return { [`flags.hero-engine.secureRequests.${requestId}`]: { ...request, createdAt, pluginId } };
+}
+
+export function secureRequestRemovalUpdate(requestId: string): Record<string, unknown> {
+  return { [`flags.hero-engine.secureRequests.-=${requestId}`]: null };
+}
 
 // ---------------------------------------------------------------------------
 // Evaluation data
@@ -194,8 +206,10 @@ export function makeContext(att: Attachment): MechanicContext | null {
   if (!plugin) return null;
   const state = () => readState(att.stateDoc, att.pluginId);
 
-  const ctx: MechanicContext = {
+  let ctx!: MechanicContext;
+  ctx = {
     actor: att.actor,
+    canonicalActor: att.canonicalActor,
     item: att.item,
     pluginId: att.pluginId,
     config<T>(key: string): T {
@@ -231,6 +245,11 @@ export function makeContext(att: Attachment): MechanicContext | null {
         const t = state()?.transform;
         return t ? { id: t.id, roundsLeft: t.roundsLeft } : null;
       },
+    },
+    records: makeRecordAccessor(att, plugin, () => ctx),
+    requestSecureTarget: async (request) => {
+      const requestId = foundry.utils.randomID();
+      await att.canonicalActor.update(secureRequestUpdate(requestId, plugin.id, request));
     },
     evalFormula: (formula) => {
       const s = state();
@@ -347,6 +366,14 @@ export async function clearEventCooldowns(
 // Actions
 
 export async function executeAction(att: Attachment, actionId: string): Promise<void> {
+  try {
+    await executeActionInternal(att, actionId);
+  } finally {
+    notifyMechanicSettled(att, "action", actionId);
+  }
+}
+
+async function executeActionInternal(att: Attachment, actionId: string): Promise<void> {
   const plugin = getPlugin(att.pluginId);
   if (!plugin) return;
   const action = plugin.actions?.find((a) => a.id === actionId);
@@ -393,26 +420,32 @@ export async function executeAction(att: Attachment, actionId: string): Promise<
   }
 
   // Pay costs and apply declarative ops.
+  const rollbackState = structuredClone(state);
   const payOps: StateOp[] = costs.map((c) => ({ op: "adjust", target: c.resource, amount: -c.amount }));
   await applyOpsTo(att, plugin, [...payOps, ...(action.apply ?? [])], `action:${action.id}`);
-
-  if (action.roll) {
-    const s2 = readState(att.stateDoc, plugin.id)!;
-    await rollDice(att.actor, resolveDiceFormula(action.roll.formula, att, plugin, s2), buildEvalData(att, plugin, s2), action.roll.flavorKey);
-  }
-  if (action.transform) {
-    const ctx = makeContext(att);
-    if (ctx) await activateTransform(ctx, plugin, action.transform, att);
-  }
-  if (action.adjudicate) await enqueueAdjudication(att, action.adjudicate);
-  if (action.table) await rollConsequenceTable(att, plugin, action.table);
-
-  await markCooldown(att, plugin, action);
-  await postChat(att.actor, "HEROENGINE.Chat.ActionUsed", { action: localize(action.labelKey) });
-
-  if (action.runHook) {
-    const ctx = makeContext(att);
-    if (ctx) await plugin.hooks?.onActionUse?.(ctx, action, promptResult);
+  try {
+    if (action.roll) {
+      const s2 = readState(att.stateDoc, plugin.id)!;
+      await rollDice(att.actor, resolveDiceFormula(action.roll.formula, att, plugin, s2), buildEvalData(att, plugin, s2), action.roll.flavorKey);
+    }
+    if (action.transform) {
+      const ctx = makeContext(att);
+      if (ctx) await activateTransform(ctx, plugin, action.transform, att);
+    }
+    if (action.adjudicate) await enqueueAdjudication(att, action.adjudicate);
+    if (action.table) await rollConsequenceTable(att, plugin, action.table);
+    if (action.runHook) {
+      const ctx = makeContext(att);
+      if (ctx) await plugin.hooks?.onActionUse?.(ctx, action, promptResult);
+    }
+    await markCooldown(att, plugin, action);
+    if (action.announceUse !== false) {
+      await postChat(att.actor, "HEROENGINE.Chat.ActionUsed", { action: localize(action.labelKey) });
+    }
+  } catch (error) {
+    appendAudit(rollbackState, `action ${action.id} rolled back after failure`);
+    await writeState(att.stateDoc, plugin.id, rollbackState);
+    throw error;
   }
 }
 

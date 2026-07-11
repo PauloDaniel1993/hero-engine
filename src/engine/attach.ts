@@ -7,6 +7,7 @@ import { MODULE_ID } from "../constants";
 import { localize } from "./i18n";
 import { getPlugin } from "./registry";
 import { makeContext, buildEvalData } from "./runtime";
+import { ensureAttachmentReady } from "./records";
 import {
   initialState,
   readState,
@@ -14,10 +15,12 @@ import {
   setActorAttachment,
   writeState,
   clearState,
+  canonicalActor,
   type Attachment,
 } from "./state";
 
 export async function attachMechanic(actor: any, pluginId: string, options: { item?: any } = {}): Promise<void> {
+  const stableActor = canonicalActor(actor);
   const plugin = getPlugin(pluginId);
   if (!plugin) throw new Error(`hero-engine: unknown mechanic "${pluginId}"`);
   if (!game.user.isGM) throw new Error("hero-engine: only the GM can attach mechanics");
@@ -29,8 +32,8 @@ export async function attachMechanic(actor: any, pluginId: string, options: { it
     return;
   }
 
-  const stateDoc = plugin.archetype === "item" ? options.item : actor;
-  const att: Attachment = { actor, stateDoc, item: options.item, pluginId };
+  const stateDoc = plugin.archetype === "item" ? options.item : stableActor;
+  const att: Attachment = { actor, canonicalActor: stableActor, stateDoc, item: options.item, pluginId };
 
   // Existing state on the item (weapon changing hands) is kept intact.
   if (!readState(stateDoc, pluginId)) {
@@ -43,10 +46,13 @@ export async function attachMechanic(actor: any, pluginId: string, options: { it
   if (plugin.archetype === "item") {
     await options.item.setFlag(MODULE_ID, "boundPlugin", pluginId);
   }
-  await setActorAttachment(actor, pluginId, plugin.archetype === "item" ? { itemUuid: options.item.uuid } : {});
+  await setActorAttachment(stableActor, pluginId, plugin.archetype === "item" ? { itemUuid: options.item.uuid } : {});
 
   const ctx = makeContext(att);
-  if (ctx) await plugin.hooks?.onAttach?.(ctx);
+  if (ctx) {
+    await ensureAttachmentReady(att, plugin, () => ctx);
+    await plugin.hooks?.onAttach?.(ctx);
+  }
   ui.notifications?.info(localize("HEROENGINE.Attach.Done", { mechanic: localize(plugin.nameKey) }));
 }
 
@@ -65,7 +71,7 @@ export async function detachMechanic(actor: any, pluginId: string): Promise<void
     await clearState(att.stateDoc, pluginId);
     if (att.item) await att.item.unsetFlag(MODULE_ID, "boundPlugin");
   }
-  await setActorAttachment(actor, pluginId, null);
+  await setActorAttachment(canonicalActor(actor), pluginId, null);
 }
 
 /**

@@ -202,4 +202,30 @@ describe("validatePlugin", () => {
     expect(issues.some((i) => /duplicate key "a"/.test(i.message))).toBe(true);
     expect(issues.some((i) => i.path === "configSchema[2].default" && /@nope/.test(i.message))).toBe(true);
   });
+
+  it("validates record collection schemas, capacity formulas, and action ids", () => {
+    expect(validatePlugin(minimal({
+      trackers: [{ id: "slots", labelKey: "x", initial: 3 }],
+      recordCollections: [{
+        id: "echoes", labelKey: "x", schemaVersion: 1, capacity: "@slots",
+        fields: [{ key: "name", type: "string", labelKey: "x" }],
+        actions: [{ id: "use", labelKey: "x" }],
+      }],
+    }))).toEqual([]);
+    const issues = validatePlugin(minimal({ recordCollections: [{
+      id: "echoes", labelKey: "x", schemaVersion: 0, capacity: "@missing",
+      fields: [
+        { key: "Bad key", type: "string", labelKey: "x" },
+        { key: "category", type: "choice", labelKey: "x" },
+      ],
+      actions: [{ id: "Bad", labelKey: "x" }],
+    }] }));
+    expect(issues.map((issue) => issue.path)).toEqual(expect.arrayContaining([
+      "recordCollections[0].schemaVersion",
+      "recordCollections[0].capacity",
+      "recordCollections[0].fields[0].key",
+      "recordCollections[0].fields[1].choices",
+      "recordCollections[0].actions[0].id",
+    ]));
+  });
 });

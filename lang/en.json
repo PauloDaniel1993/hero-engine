@@ -4,6 +4,20 @@
       "DawnHour": {
         "Name": "Dawn hour",
         "Hint": "World-time hour (0-23) at which 'dawn' recharges fire. Default 6."
+      },
+      "BackupEvidence": {
+        "Name": "Verified backup evidence",
+        "Hint": "Required before managed actor installation: enter a backup path, snapshot ID, or checksum record."
+      },
+      "Theme": {
+        "Name": "Hero Engine theme",
+        "Hint": "World-default visual theme; each client may override it locally.",
+        "ClientName": "Hero Engine theme override",
+        "ClientHint": "Use the world theme or select a visual theme only for this browser.",
+        "WorldDefault": "Use world default",
+        "Basalt": "Basalt and thunder",
+        "Storm": "Deep storm",
+        "Gold": "Stolen gold"
       }
     },
     "Socket": {
@@ -11,10 +25,32 @@
       "QueueDrained": "{count} queued Hero Engine request(s) delivered to the GM."
     },
     "GMConfirm": { "Title": "Hero Engine — GM confirmation" },
+    "Dialog": {
+      "ConfirmSubtitle": "Review this request before continuing.",
+      "ChooseSubtitle": "Choose one option to continue.",
+      "ChooseHint": "Select an option",
+      "InputSubtitle": "Enter a value and apply the change.",
+      "Cancel": "Cancel",
+      "Confirm": "Confirm",
+      "Apply": "Apply change"
+    },
+    "ActionTooltip": {
+      "Action": "Hero Engine action",
+      "Available": "Available",
+      "Unavailable": "Unavailable",
+      "Cost": "Cost",
+      "NoCost": "No resource cost",
+      "WhyUnavailable": "Why this is unavailable",
+      "Ready": "Ready to use",
+      "HoverHint": "Shown after a 500 ms hover",
+      "NoDescription": "Use {action} through this mechanic."
+    },
     "Errors": {
       "GMOnly": "Only the GM can do that.",
       "NotOwner": "You do not own this actor.",
       "Unavailable": "This action is not available right now.",
+      "RequiresState": "A required mechanic state is not active.",
+      "ForbiddenState": "The current mechanic state blocks this action.",
       "OnCooldown": "On cooldown ({remaining}).",
       "NotEnough": "Not enough {resource}.",
       "AlreadyTransformed": "A transformation is already active.",
@@ -50,30 +86,70 @@
       "Rebound": "{mechanic} now follows its item to {actor}."
     },
     "Panel": {
+      "EngineName": "Hero Engine",
       "Title": "Mechanics",
+      "Open": "Open Hero Engine mechanics",
+      "Subtitle": "Epic powers, resources and active states",
       "Transform": "Active form",
+      "EndTransform": "End transformation",
       "RoundsLeft": "{rounds} round(s) left",
+      "Character": "Character",
+      "ActiveState": "Active states",
+      "Actions": "Actions",
       "ManualTriggers": "Manual triggers"
     },
     "Stance": { "None": "— none —" },
     "Config": {
       "Save": "Save",
+      "Cancel": "Cancel",
       "Saved": "Configuration saved.",
       "WorldTitle": "World configuration",
+      "WorldSubtitle": "Set the default balance and behavior for this mechanic.",
       "OverrideTitle": "Per-actor overrides",
+      "OverrideSubtitle": "Customize this mechanic for one specific character.",
+      "General": "General",
+      "Options": "{count} options",
       "OverrideThis": "Override this field",
       "Clear": "Clear"
+    },
+    "ItemPicker": {
+      "Title": "Choose an item",
+      "Subtitle": "Select the item on {actor} that will carry this mechanic.",
+      "SearchPlaceholder": "Search items by name…",
+      "ItemsFound": "{count} items",
+      "FilterBy": "Filter by item category",
+      "Gear": "Gear",
+      "All": "All",
+      "Spells": "Spells",
+      "Features": "Features",
+      "Other": "Other",
+      "NoResults": "No matching items",
+      "TryAnother": "Try another name or clear the search.",
+      "SelectPrompt": "Select one item to continue",
+      "Selected": "Selected",
+      "Item": "Item",
+      "Cancel": "Cancel",
+      "Save": "Save binding"
     },
     "GMPanel": {
       "MenuName": "GM Control Panel",
       "MenuLabel": "Open panel",
       "MenuHint": "All attached mechanics: trackers, recharges, transformations and pending rulings.",
+      "ToolbarTitle": "Open Hero Engine GM Control Panel",
       "Title": "Hero Engine — GM Control Panel",
       "Adjudications": "Pending rulings",
       "NoAdjudications": "Nothing awaiting a ruling.",
+      "RulingsHint": "Review decisions that require GM approval.",
       "Attach": "Attach a mechanic",
       "AttachButton": "Attach",
+      "AttachHint": "Choose an actor and the ruleset to bind.",
+      "SearchActors": "Search characters by name…",
+      "Actor": "Character or NPC",
+      "Mechanic": "Mechanic",
+      "Available": "{count} available",
+      "NoActorsFound": "No characters match that search.",
       "Attachments": "Attached mechanics",
+      "AttachmentsHint": "Monitor resources, cooldowns and transformations.",
       "None": "No mechanics attached yet.",
       "NoItems": "That actor has no items to bind.",
       "PickItem": "Bind to which item?",
@@ -81,9 +157,226 @@
       "EndTransform": "End transformation",
       "Overrides": "Overrides",
       "WorldConfig": "World configuration",
+      "ConfigHint": "Tune the default rules for every registered mechanic.",
+      "Registered": "Registered",
       "AdjustHint": "Click to adjust (enter e.g. \"-2 spent on ritual\")",
       "AdjustTitle": "Adjust value",
       "AdjustLabel": "Delta and reason for {id} (e.g. \"-2 spent on ritual\"):"
+    },
+    "Records": {
+      "Search": "Search records…",
+      "All": "All",
+      "Permanent": "Permanent",
+      "Temporary": "Temporary",
+      "Blocked": "Blocked",
+      "Empty": "Empty slot",
+      "Overflow": "Overflow"
+      ,"Pending": "Pending capture"
+      ,"PendingHint": "All usable slots are full. Choose the Echo to erase, or cancel this capture."
+      ,"Replace": "Erase and replace"
+      ,"Cancel": "Cancel capture"
+      ,"MissingLink": "Repair needed"
+      ,"MissingLinkHint": "The linked dnd5e activity is missing. Using this record rebuilds it from authoritative record data."
+    },
+    "Thargunn": {
+      "Name": "Thar’gunn — The Tenth Life",
+      "Description": "The Tenth Life Thief, Hollow Echoes, Hunger, Skeldr and the March of the Tenth Legend.",
+      "Trackers": {
+        "WeaponLevel": "Weapon level",
+        "HungerTemporary": "Temporary Hunger",
+        "HungerPermanent": "Permanent Hunger",
+        "HungerTotal": "Hunger / Legend's Weight",
+        "EssenceDebt": "Essence Debt",
+        "Legends": "Recorded Legends",
+        "Fractures": "Name Fractures"
+      },
+      "Resources": { "Charges": "Tenth Life charges", "LegendaryPoints": "Legendary Points" },
+      "ActionDescriptions": {
+        "Siphon": "Target a creature and attempt to steal one eligible feature as a Hollow Echo.",
+        "Field": "Spend every remaining Tenth Life charge to create the moving Field until its duration ends.",
+        "FieldExit": "Resolve the Strength save when an enemy attempts to leave the active Field.",
+        "Ultimate": "Request the March of the Tenth Legend. A player request waits for GM approval before the actor swap.",
+        "Rite": "Attempt the three DC 25 checks of the Rite of the Tenth Legend.",
+        "Purify": "Choose one persistent Hunger, Debt, Echo-slot, Skeldr, or Fracture consequence to repair.",
+        "SkeldrMove": "Spend 1 Legendary Point for Skeldr to move 60 feet and arm Thunderous Step after 20 feet.",
+        "MightyImpel": "Spend 1 Legendary Point to use Mighty Impel against a Huge or smaller creature.",
+        "DevastatingStrike": "Spend 2 Legendary Points to make the provisional force-and-thunder strike.",
+        "LegendaryEcho": "Spend 2 Legendary Points to manifest one stored Hollow Echo.",
+        "SecondSiphon": "Spend 3 Legendary Points to attempt a second Tenth Life Siphon this turn.",
+        "SkeldrRescue": "Spend 3 Legendary Points for Skeldr to preserve a downed ally at 1 HP.",
+        "HungerGuard": "Once per short rest, Skeldr prevents one point of Hunger.",
+        "EarlyReturn": "Record a protective Legend to call an absent Skeldr back early.",
+        "RecordLegend": "Record the name and deed of one mythic Legend."
+      },
+      "Availability": {
+        "FieldInactive": "The Field of the Tenth Mark must be active.",
+        "UltimateRest": "The Ultimate has already been spent; finish a long rest to restore it.",
+        "ApprovalPending": "The Ultimate request is waiting for the GM's ruling.",
+        "UltimateInactive": "The March of the Tenth Legend must be active.",
+        "TakeoverLocked": "The Nameless Sovereign controls the Ultimate's first turn.",
+        "SkeldrAbsent": "Skeldr is absent and cannot protect Thar’gunn.",
+        "GuardSpent": "Skeldr has already prevented Hunger during this short rest.",
+        "SkeldrPresent": "Skeldr is already present; an early return is unnecessary."
+      },
+      "Hunger": {
+        "T3": "The weapon’s whisper",
+        "T5": "Predatory demand",
+        "T7": "Control save",
+        "T10": "True-name fracture",
+        "PermanentRuling": "Make one Hunger from this mythic Echo permanent?",
+        "CruelDemand": "The weapon demands a cruel or predatory act.",
+        "ControlLoss": "Thar’gunn failed the control save and may lose one turn.",
+        "NameFragment": "The Nameless Sovereign attempts to take a fragment of Thar’gunn's true name.",
+        "WeightDemand": "Legend's Weight demands a self-imposed burden worthy of the power used.",
+        "WeightControl": "Thar’gunn must choose a costly legendary restraint for this turn.",
+        "MemoryDistortion": "Legend's Weight erases or distorts an important memory; the Sovereign cannot take control."
+      },
+      "Debt": { "T3": "The Sovereign speaks", "T5": "Soul replacement" },
+      "Recharge": { "BloodQuestion": "Has the weapon tasted living blood since the previous dawn?", "BloodHit": "Living blood tasted" },
+      "Echo": {
+        "Permanent": "Permanent Hollow Echoes",
+        "PermanentHint": "Abilities captured from creatures that died before the theft expired.",
+        "Temporary": "Temporary Hollow Echoes",
+        "TemporaryHint": "Stolen abilities that expire after ten rounds unless their source dies.",
+        "Name": "Echo name",
+        "Category": "Category",
+        "Tier": "Power tier",
+        "Cost": "Charge cost",
+        "SoulDamage": "Soul damage",
+        "Description": "Playable corrupted form",
+        "Source": "Opaque source",
+        "Use": "Use Echo",
+        "Erase": "Erase",
+        "None": "No permanent Hollow Echo is available.",
+        "Used": "{echo} tears through Thar’gunn’s soul and manifests.",
+        "SoulDamageFlavor": "Hollow Echo soul damage",
+        "ErasureFailed": "The erasure fails (DC {dc}): {result}",
+        "ErasureTable": "Price of erasure",
+        "Erasure1": "6d10 psychic damage.",
+        "Erasure2": "Lose one Hit Die until Greater Restoration.",
+        "Erasure3": "Disadvantage on death saves until the next long rest.",
+        "Erasure4": "The erased ability manifests once against Thar’gunn.",
+        "Erasure5": "The weapon refuses another theft until a powerful creature is slain.",
+        "Erasure6": "Gain one Essence Debt."
+      },
+      "Legends": { "Collection": "Named Recorded Legends", "Name": "Legend name", "Description": "What made this deed mythic", "Add": "Record a named Legend" },
+      "Skeldr": {
+        "GuardAction": "Skeldr prevents one Hunger",
+        "GuardUnavailable": "Skeldr is absent or has already guarded Hunger this short rest.",
+        "Guarded": "Skeldr’s thunder steadies Thar’gunn and prevents one Hunger.",
+        "EarlyReturn": "Return Skeldr through a protective Legend",
+        "EarlyLegend": "The thunder answered early",
+        "EarlyLegendHint": "A protective deed called Skeldr back before the appointed day.",
+        "Defeated": "Skeldr dissolves into thunder and will return in {days} day(s).",
+        "Returned": "Skeldr returns from the thunder at full strength."
+      },
+      "Siphon": {
+        "Action": "Siphon Essence",
+        "PickTitle": "Choose the Hollow Echo",
+      "PickHint": "Select the feature whose identity the weapon will attempt to steal.",
+      "Search": "Search eligible features…",
+      "Filter": "Filter by Echo category",
+      "AllCategories": "All categories",
+      "Available": "available",
+      "Select": "Steal selected feature",
+      "SpellLevel": "level",
+      "Redacted": "Details remain hidden until the GM validates the capture.",
+      "NoMatches": "No features match this search.",
+        "CategoryTitle": "What kind of identity should the weapon seek?",
+        "CategoryHint": "Choose a redacted category. The GM will validate the private target and eligible feature.",
+        "SentToGm": "The Siphon request was sent for authoritative GM validation.",
+        "NoFeature": "No supported feature was eligible for capture.",
+        "TooStrong": "{echo} is a {tier} Echo, beyond the weapon's current {maxTier} limit.",
+        "Resisted": "{target} resists the Siphon ({total} vs DC {dc}).",
+        "Captured": "{echo} is torn from {target} and becomes a Hollow Echo.",
+        "Suppressed": "Identity Siphoned",
+        "SuppressedUse": "That ability is temporarily suppressed by the Tenth Life Thief.",
+        "GmTitle": "Validate private Siphon",
+        "GmHint": "Revalidate owner, target, weapon, trigger and eligible feature without disclosing private actor data."
+      },
+      "Categories": {
+        "trait": "Trait", "action": "Action", "reaction": "Reaction", "resistance": "Resistance", "sense": "Sense",
+        "multiattack": "Multiattack", "recharge": "Recharge", "legendary-resistance": "Legendary Resistance",
+        "legendary-action": "Legendary Action", "lair-action": "Lair Action", "spell": "Spell", "class-feature": "Class feature",
+        "divine": "Divine power", "artifact": "Artifact power", "core": "Core identity"
+      },
+      "Field": {
+        "Action": "Field of the Tenth March",
+        "ExitAction": "Resolve an enemy leaving the Field",
+        "Rooted": "Claimed by the Tenth March",
+        "ExitFailed": "{target} fails the DC {dc} Strength save; its speed becomes 0 for the turn.",
+        "Unavailable": "The Field needs at least one charge and cannot be used again before a long rest.",
+        "Activated": "The Field consumes {charges} charges; a 165-foot march of stolen earth follows Thar’gunn.",
+        "Expiry": "Field duration reconciliation"
+      },
+      "Ultimate": {
+        "Name": "The March of the Tenth Legend",
+        "Action": "Activate Ultimate",
+        "ApprovalTitle": "Approve the Ultimate transformation",
+        "ApprovalHint": "The player completed the access save. Approve to re-check every prerequisite and perform the dnd5e actor swap on the GM client. Deny to make no change.",
+        "ApprovalRequested": "requests GM approval for the Ultimate transformation. No transformation or long-rest use has been applied yet.",
+        "ApprovalMissing": "This Ultimate request is missing or no longer pending. Ask the player to submit it again.",
+        "ApprovalInvalidOwner": "The requesting user no longer owns this actor. The Ultimate request was cancelled.",
+        "ActivationFailed": "The Ultimate form could not be created. No Ultimate use was consumed.",
+        "Blocked": "Ultimate prerequisites failed",
+        "AccessTitle": "Who commands the Tenth March?",
+        "AccessBody": "Choose Wisdom or Charisma to resist the Nameless Sovereign.",
+        "ExpiryDamage": "Name Fracture settlement",
+        "Ended": "The Tenth March ends and every stolen name demands its price.",
+        "SkeldrEnhancement": "Ultimate: 120-foot speed, ignores difficult terrain, and movement does not provoke opportunity attacks.",
+        "GmChoosesFirstEcho": "The GM must choose the first Hollow Echo of the Usurped March.",
+        "GmChoosesFirstEchoHint": "Choose which stored Echo the Nameless Sovereign forces Thar’gunn to manifest.",
+        "FirstTurnTakeover": "Natural 1: the Nameless Sovereign controls the first Ultimate turn.",
+        "BlockSlot": "Choose an Echo slot to block from Name Fracture",
+        "IdentityRuling": "Resolve the identity fragment lost at ten Name Fractures"
+        ,"ThunderousStep": "Thunderous Step of Skeldr"
+        ,"ThunderousDamage": "Thunderous Step damage"
+        ,"ThunderousFailed": "{target} is hurled 60 feet, knocked prone, and loses reactions."
+        ,"SkeldrMove": "Skeldr moves 60 ft"
+        ,"SkeldrMoves": "Skeldr advances {distance} feet and arms Thunderous Step."
+        ,"MightyImpelAction": "Mighty Impel"
+        ,"MightyImpel": "Thar’gunn uses Mighty Impel against a Huge or smaller creature."
+        ,"DevastatingStrike": "Devastating Strike"
+        ,"DevastatingDamage": "Provisional Devastating Strike damage"
+        ,"LegendaryEcho": "Use a Hollow Echo"
+        ,"SecondSiphon": "Second Tenth Life Siphon"
+        ,"SkeldrRescue": "Skeldr preserves an ally at 1 HP"
+      },
+      "Rite": {
+        "Action": "Rite of the Tenth Legend",
+        "NeedsLegends": "The rite requires ten named Recorded Legends.",
+        "Success": "Thar’gunn names himself. The weapon answers to his legend, not the Sovereign.",
+        "Failure": "The rite fails: two Essence Debts and one blocked Echo slot.",
+        "BlockSlot": "Choose the Echo slot blocked by the failed rite",
+        "NameEscalation": "Two natural ones: resolve the Sovereign’s immediate attempt to take the true name"
+      },
+      "Purification": {
+        "Action": "Purification and recovery",
+        "Title": "Choose what the purification repairs",
+        "Hint": "Every recovery is selective, reversible, and recorded.",
+        "hunger": "Remove permanent Hunger",
+        "debt": "Clear Essence Debt",
+        "slot": "Unblock an Echo slot",
+        "skeldr": "Return Skeldr",
+        "fracture": "Repair Fracture max HP"
+      },
+      "Triggers": { "LongRest": "Long-rest recovery", "ShortRest": "Short-rest recovery", "TurnStart": "Ultimate turn start", "TurnEnd": "Ultimate turn end" },
+      "Errors": { "NotEnoughCharges": "Not enough Tenth Life charges.", "SelectTarget": "Target one creature first." },
+      "Config": {
+        "Siphon": "Siphon and Echoes",
+        "SiphonBaseDc": "Siphon base DC",
+        "TemporarySeconds": "Temporary Echo duration (seconds)",
+        "Field": "Field of the Tenth March",
+        "FieldRadius": "Field radius (feet)",
+        "FieldSeconds": "Field duration (seconds)",
+        "Ultimate": "Native level-20 Ultimate",
+        "UltimateRounds": "Ultimate turns",
+        "StrikeDamage": "Provisional Devastating Strike dice",
+        "Skeldr": "Skeldr",
+        "SkeldrReturn": "Skeldr return days",
+        "Rite": "Rite and recovery",
+        "RiteDc": "Rite check DC"
+      }
     }
   }
 }

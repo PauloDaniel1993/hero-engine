@@ -2,7 +2,7 @@
   "id": "hero-engine",
   "title": "Hero Engine",
   "description": "A plugin engine for bespoke epic character and weapon mechanics: trackers, charges, triggers, stances, transformations, curses and GM-adjudicated rituals — fully configurable, driven by a typed plugin API.",
-  "version": "0.1.0",
+  "version": "1.0.12",
   "authors": [{ "name": "pdc", "email": "pdc187@gmail.com" }],
   "compatibility": {
     "minimum": "13",
@@ -20,6 +20,11 @@
   },
   "esmodules": ["scripts/hero-engine.mjs"],
   "styles": ["styles/hero-engine.css"],
+  "packs": [
+    { "name": "thargunn-actors", "label": "Hero Engine — Thar’gunn Actors", "path": "packs/thargunn-actors", "type": "Actor", "system": "dnd5e", "ownership": { "PLAYER": "OBSERVER", "ASSISTANT": "OWNER" } },
+    { "name": "thargunn-items", "label": "Hero Engine — Thar’gunn Items", "path": "packs/thargunn-items", "type": "Item", "system": "dnd5e", "ownership": { "PLAYER": "OBSERVER", "ASSISTANT": "OWNER" } },
+    { "name": "thargunn-macros", "label": "Hero Engine — Thar’gunn Macros", "path": "packs/thargunn-macros", "type": "Macro", "ownership": { "PLAYER": "OBSERVER", "ASSISTANT": "OWNER" } }
+  ],
   "languages": [
     { "lang": "en", "name": "English", "path": "lang/en.json" },
     { "lang": "pt-BR", "name": "Português (Brasil)", "path": "lang/pt-BR.json" }

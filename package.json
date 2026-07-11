@@ -1,18 +1,22 @@
 {
   "name": "hero-engine",
-  "version": "0.1.0",
+  "version": "1.0.12",
   "private": true,
   "type": "module",
   "description": "Foundry VTT plugin engine for bespoke epic character/weapon mechanics (dnd5e)",
   "scripts": {
-    "build": "vite build && npm run types && node scripts/check-plugin-imports.mjs",
+    "build": "npm run packs && vite build && npm run types && node scripts/check-plugin-imports.mjs && npm run check:bundle",
+    "packs": "node scripts/build-packs.mjs",
+    "check:i18n": "node scripts/check-localization.mjs",
+    "check:bundle": "node scripts/check-bundle.mjs",
     "types": "tsc -p tsconfig.types.json",
-    "check": "tsc -p tsconfig.json --noEmit && node scripts/check-plugin-imports.mjs",
+    "check": "tsc -p tsconfig.json --noEmit && node scripts/check-plugin-imports.mjs && npm run check:i18n",
     "test": "vitest run",
     "test:watch": "vitest",
     "deploy": "node scripts/deploy.mjs"
   },
   "devDependencies": {
+    "classic-level": "^3.0.0",
     "typescript": "^5.6.3",
     "vite": "^7.0.0",
     "vitest": "^3.2.0"

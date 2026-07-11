@@ -31,6 +31,13 @@ export async function enqueueAdjudication(att: Attachment, adjudicationId: strin
 /** GM-side: append to the persisted queue and badge the panel. */
 export async function enqueueDirect(entry: QueuedAdjudication): Promise<void> {
   const queue = getAdjudicationQueue();
+  // Reconnect recovery and the original socket delivery may race. A pending
+  // ruling is a single logical request, so never show it twice to the GM.
+  const duplicate = queue.some((queued) => queued.actorUuid === entry.actorUuid
+    && queued.pluginId === entry.pluginId
+    && queued.adjudicationId === entry.adjudicationId
+    && queued.note === entry.note);
+  if (duplicate) return;
   queue.push(entry);
   await setAdjudicationQueue(queue);
   ui.notifications?.info(localize("HEROENGINE.Adjudication.Queued"));
