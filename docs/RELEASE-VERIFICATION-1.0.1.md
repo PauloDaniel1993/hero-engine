@@ -86,6 +86,25 @@ Date: 2026-07-11 (Europe/Lisbon)
 - Foundry 14.361 restarted after controlled world deactivation. The live world
   loaded Hero Engine 1.0.1 with dnd5e 5.3.3 and retained the curated state.
 
+## Published readback
+
+- Draft PR: `https://github.com/PauloDaniel1993/hero-engine/pull/1`.
+- Release workflow:
+  `https://github.com/PauloDaniel1993/hero-engine/actions/runs/29151349432`
+  completed successfully.
+- Release: `https://github.com/PauloDaniel1993/hero-engine/releases/tag/v1.0.1`.
+- Published manifest SHA-256:
+  `b0c2f61faf94fe97d835c072109a24960905437abfe9d4e5770eed989f3258ba`.
+- Published archive SHA-256:
+  `f6f7fb26363f2938319170716036f45840e0812c5cce0876a258b11fc784b1af`.
+- The downloaded manifest exactly matches repository `module.json`, reports
+  Hero Engine 1.0.1 and Foundry 13–14 compatibility, and points Foundry at the
+  latest immutable release assets.
+- The archive contains 36 files excluding directory entries, including all
+  three LevelDB packs, local artwork, declarations, and runtime bundle. Bundle
+  inspection found all three managed weapon activity IDs and the Huge-size
+  reconciliation code.
+
 ## Remaining non-blocking scope evidence
 
 OpenSpec intentionally remains incomplete for the exhaustive private-target,
