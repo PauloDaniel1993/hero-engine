@@ -153,6 +153,14 @@ async function removeSuppression(recordId: string): Promise<void> {
   }
 }
 
+async function removeLinkedRecordItems(att: Attachment, recordId: string): Promise<void> {
+  const actor = att.canonicalActor as any;
+  const ids = actor.items?.filter?.((item: any) => item.getFlag?.("hero-engine", "managed")?.recordId === recordId).map((item: any) => item.id) ?? [];
+  if (ids.length && (game.user?.isGM || actor.testUserPermission?.(game.user, "OWNER"))) {
+    await actor.deleteEmbeddedDocuments?.("Item", ids);
+  }
+}
+
 export async function reconcileRecordLifecycles(att: Attachment, plugin: MechanicPlugin, getContext: () => MechanicContext): Promise<string[]> {
   if (!plugin.recordCollections?.length) return [];
   const expired: string[] = [];
@@ -174,7 +182,10 @@ export async function reconcileRecordLifecycles(att: Attachment, plugin: Mechani
       });
     }
   });
-  for (const id of expired) await removeSuppression(id);
+  for (const id of expired) {
+    await removeSuppression(id);
+    await removeLinkedRecordItems(att, id);
+  }
   return expired;
 }
 
@@ -261,6 +272,8 @@ export function makeRecordAccessor(att: Attachment, plugin: MechanicPlugin, getC
         slot.record = null;
         appendAudit(state, `record ${def.id}/${recordId} removed`);
       }, { idempotencyKey });
+      await removeSuppression(recordId);
+      await removeLinkedRecordItems(att, recordId);
     },
     async block(collectionId, slotId, reason) {
       if (!game.user?.isGM) throw new Error("hero-engine: only the GM can block a record slot");
@@ -287,12 +300,14 @@ export function makeRecordAccessor(att: Attachment, plugin: MechanicPlugin, getC
     async expire(collectionId, recordId) { await this.remove(collectionId, recordId, `expire:${collectionId}:${recordId}`); },
     async replacePending(collectionId, pendingId, eraseRecordId) {
       const def = collectionDef(plugin, collectionId);
+      let erasedRecordId: string | undefined;
       const result = await mutateState(att.stateDoc, plugin.id, (state) => {
         requireWritable(att, def, state);
         const stored = state.collections[def.id];
         const pendingIndex = stored?.pending.findIndex((entry) => entry.id === pendingId) ?? -1;
         const erased = findRecordSlot(state, collectionId, eraseRecordId);
         if (!stored || pendingIndex < 0 || !erased?.record) throw new Error("hero-engine: pending replacement is no longer valid");
+        erasedRecordId = erased.record.id;
         const [pending] = stored.pending.splice(pendingIndex, 1);
         const record = pending!.record;
         erased.record = record;
@@ -300,16 +315,25 @@ export function makeRecordAccessor(att: Attachment, plugin: MechanicPlugin, getC
         return record;
       }, { idempotencyKey: `replace:${collectionId}:${pendingId}` });
       if (!result.value) throw new Error("hero-engine: pending replacement already settled");
+      if (erasedRecordId) {
+        await removeSuppression(erasedRecordId);
+        await removeLinkedRecordItems(att, erasedRecordId);
+      }
       return result.value;
     },
     async cancelPending(collectionId, pendingId) {
       const def = collectionDef(plugin, collectionId);
+      let cancelledRecordId: string | undefined;
       await mutateState(att.stateDoc, plugin.id, (state) => {
         requireWritable(att, def, state);
         const stored = state.collections[def.id];
         const index = stored?.pending.findIndex((entry) => entry.id === pendingId) ?? -1;
-        if (stored && index >= 0) stored.pending.splice(index, 1);
+        if (stored && index >= 0) cancelledRecordId = stored.pending.splice(index, 1)[0]?.record.id;
       }, { idempotencyKey: `cancel:${collectionId}:${pendingId}` });
+      if (cancelledRecordId) {
+        await removeSuppression(cancelledRecordId);
+        await removeLinkedRecordItems(att, cancelledRecordId);
+      }
     },
     async runAction(collectionId, recordId, actionId) {
       const def = collectionDef(plugin, collectionId);

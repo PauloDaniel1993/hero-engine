@@ -239,9 +239,12 @@ export function initThargunnManagedHooks(): void {
     const item = activity?.item;
     const actor = item?.actor;
     const actionId = item?.getFlag?.(MODULE_ID, "actionId");
-    if (!actor || !actionId || !actor.testUserPermission?.(game.user, "OWNER")) return;
+    const recordId = item?.getFlag?.(MODULE_ID, "managed")?.recordId;
+    const collectionId = item?.getFlag?.(MODULE_ID, "collectionId");
+    if (!actor || !actor.testUserPermission?.(game.user, "OWNER")) return;
     const attachment = resolveAttachment(actor, "thargunn-mythic");
-    if (attachment) await executeAction(attachment, actionId);
+    if (attachment && actionId) await executeAction(attachment, actionId);
+    else if (attachment && recordId && collectionId) await contextFor(actor, "thargunn-mythic")?.records.runAction(collectionId, recordId, "use");
   });
   Hooks.on("updateActor", async (actor: any, changes: any) => {
     if (!game.user?.isGM) return;

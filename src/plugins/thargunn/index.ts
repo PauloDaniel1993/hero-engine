@@ -9,6 +9,12 @@ function actorOf(ctx: MechanicContext): any { return ctx.actor as any; }
 function managedKey(doc: any): string | undefined { return doc?.getFlag?.("hero-engine", MANAGED_FLAG)?.key ?? doc?.flags?.["hero-engine"]?.managed?.key; }
 function weapon(ctx: MechanicContext): any | null { return actorOf(ctx).items?.find((item: any) => managedKey(item) === WEAPON_KEY) ?? null; }
 function actorLevel(actor: any): number { return Number(actor.system?.details?.level ?? actor.classes?.barbarian?.system?.levels ?? 0); }
+function echoIcon(category: string): string {
+  const direct = ["action", "divine", "reaction", "sense", "spell", "trait"].includes(category) ? category
+    : ["legendary-resistance", "legendary-action", "lair-action", "artifact", "core"].includes(category) ? "legendary"
+      : "trait";
+  return `modules/hero-engine/assets/thargunn/icons/echo-${direct}.webp`;
+}
 function isRaging(actor: any): boolean {
   return actor.statuses?.has?.("rage") || actor.effects?.some?.((effect: any) => effect.statuses?.has?.("rage") || /rage|fúria/i.test(effect.name));
 }
@@ -108,6 +114,7 @@ async function offerSiphon(ctx: MechanicContext, target: any, eventId: string, t
     lifecycle: temporary ? { type: "world-time", worldTime: Number(game.time?.worldTime ?? 0) + temporarySeconds } : { type: "permanent" },
     idempotencyKey: `siphon:${eventId}:${feature.opaqueId}`,
   });
+  await createEchoItem(ctx, collectionId, record);
   await ctx.state.adjust("hungerTemporary", 1);
   if (ctx.state.transform()?.id === "tenth-march") await ctx.state.adjust("fractures", 1);
   await ctx.postChat(`${P}.Siphon.Captured`, { echo: record.data.name, target: target.name });
@@ -119,13 +126,39 @@ async function offerSiphon(ctx: MechanicContext, target: any, eventId: string, t
   }
 }
 
+async function createEchoItem(ctx: MechanicContext, collectionId: string, record: MechanicRecord): Promise<void> {
+  const actor = actorOf(ctx);
+  if (actor.items?.some?.((item: any) => item.getFlag?.("hero-engine", MANAGED_FLAG)?.recordId === record.id)) return;
+  const activityId = foundry.utils.randomID();
+  await actor.createEmbeddedDocuments?.("Item", [{
+    name: `Eco Oco — ${String(record.data["name"] ?? "Unknown")}`,
+    type: "feat",
+    img: echoIcon(String(record.data["category"] ?? "trait")),
+    system: {
+      identifier: `hollow-echo-${record.id}`,
+      description: { value: `<p>${String(record.data["description"] ?? "")}</p><p><strong>${game.i18n.localize(`${P}.Echo.Cost`)}:</strong> ${record.data["cost"]} · <strong>${game.i18n.localize(`${P}.Echo.SoulDamage`)}:</strong> ${record.data["soulDamage"]}</p>` },
+      activities: { [activityId]: {
+        _id: activityId, type: "utility", name: String(record.data["name"] ?? "Hollow Echo"), sort: 0,
+        activation: { type: "action", value: 1, condition: "", override: true },
+        consumption: { targets: [], scaling: { allowed: false, max: "" }, spellSlot: false },
+        duration: { value: "", units: "inst", special: "", concentration: false, override: true },
+        range: { units: "self", special: "", override: true },
+        target: { prompt: false, affects: { type: "self", choice: false }, template: { contiguous: false, units: "ft", stationary: false }, override: true },
+        uses: { spent: 0, recovery: [] }, visibility: { level: {}, requireAttunement: false, requireIdentification: false, requireMagic: false },
+        roll: { prompt: false, visible: false }, effects: [], flags: { "hero-engine": { managed: true } },
+      } },
+    },
+    flags: { "hero-engine": { managed: { key: "thargunn.item.echo", contentVersion: 1, templateVersion: 1, sourceHash: record.id, recordId: record.id }, collectionId } },
+  }]);
+}
+
 async function useEcho(ctx: MechanicContext, collection: RecordCollectionDef, record: MechanicRecord): Promise<void> {
   const cost = Number(record.data["cost"] ?? 1);
   if (ctx.state.get("charges") < cost) throw new Error(game.i18n.localize(`${P}.Errors.NotEnoughCharges`));
   const actor = actorOf(ctx);
   const managedFeature = actor.items?.find((item: any) => item.getFlag?.("hero-engine", MANAGED_FLAG)?.recordId === record.id);
   const activity = managedFeature ? Object.values(managedFeature.system?.activities ?? {})[0] as any : null;
-  if (activity?.use) {
+  if (activity?.use && activity.getFlag?.("hero-engine", "managed") !== true && activity.flags?.["hero-engine"]?.managed !== true) {
     const result = await activity.use();
     if (!result) return;
   } else {
