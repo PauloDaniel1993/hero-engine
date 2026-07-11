@@ -1,5 +1,9 @@
 /* Hero Engine */
 
+html[data-hero-engine-theme="storm"] .hero-engine-panel { --he-sheet-accent: #62b8e8; --he-sheet-accent-soft: rgba(64,156,211,.17); }
+html[data-hero-engine-theme="gold"] .hero-engine-panel { --he-sheet-accent: #f2c968; --he-sheet-accent-soft: rgba(242,201,104,.2); }
+html[data-hero-engine-theme="storm"] #scene-controls [data-tool="hero-engine-gm"] { border-color: rgba(91,184,235,.55); color: #83d1f5; background: rgba(47,116,157,.24); }
+
 #scene-controls [data-tool="hero-engine-gm"] {
   border-color: rgba(240, 188, 83, 0.55);
   color: #f3c35f;

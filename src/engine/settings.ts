@@ -43,6 +43,37 @@ export function registerCoreSettings(): void {
     type: Array,
     default: [],
   });
+  game.settings.register(MODULE_ID, SETTINGS.backupEvidence, {
+    scope: "world",
+    config: false,
+    type: String,
+    default: "",
+  });
+  game.settings.register(MODULE_ID, SETTINGS.theme, {
+    name: "HEROENGINE.Settings.Theme.Name",
+    hint: "HEROENGINE.Settings.Theme.Hint",
+    scope: "world",
+    config: true,
+    type: String,
+    choices: { basalt: "HEROENGINE.Settings.Theme.Basalt", storm: "HEROENGINE.Settings.Theme.Storm", gold: "HEROENGINE.Settings.Theme.Gold" },
+    default: "basalt",
+  });
+  game.settings.register(MODULE_ID, SETTINGS.clientTheme, {
+    name: "HEROENGINE.Settings.Theme.ClientName",
+    hint: "HEROENGINE.Settings.Theme.ClientHint",
+    scope: "client",
+    config: true,
+    type: String,
+    choices: { "": "HEROENGINE.Settings.Theme.WorldDefault", basalt: "HEROENGINE.Settings.Theme.Basalt", storm: "HEROENGINE.Settings.Theme.Storm", gold: "HEROENGINE.Settings.Theme.Gold" },
+    default: "",
+    onChange: () => applyTheme(),
+  });
+}
+
+export function applyTheme(): void {
+  const client = String(game.settings.get(MODULE_ID, SETTINGS.clientTheme) ?? "");
+  const world = String(game.settings.get(MODULE_ID, SETTINGS.theme) ?? "basalt");
+  document.documentElement.dataset["heroEngineTheme"] = client || world || "basalt";
 }
 
 export function getDawnHour(): number {

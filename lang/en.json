@@ -4,6 +4,16 @@
       "DawnHour": {
         "Name": "Dawn hour",
         "Hint": "World-time hour (0-23) at which 'dawn' recharges fire. Default 6."
+      },
+      "Theme": {
+        "Name": "Hero Engine theme",
+        "Hint": "World-default visual theme; each client may override it locally.",
+        "ClientName": "Hero Engine theme override",
+        "ClientHint": "Use the world theme or select a visual theme only for this browser.",
+        "WorldDefault": "Use world default",
+        "Basalt": "Basalt and thunder",
+        "Storm": "Deep storm",
+        "Gold": "Stolen gold"
       }
     },
     "Socket": {
@@ -141,6 +151,129 @@
       "Blocked": "Blocked",
       "Empty": "Empty slot",
       "Overflow": "Overflow"
+    },
+    "Thargunn": {
+      "Name": "Thar’gunn — The Tenth Life",
+      "Description": "The Tenth Life Thief, Hollow Echoes, Hunger, Skeldr and the March of the Tenth Legend.",
+      "Trackers": {
+        "WeaponLevel": "Weapon level",
+        "HungerTemporary": "Temporary Hunger",
+        "HungerPermanent": "Permanent Hunger",
+        "EssenceDebt": "Essence Debt",
+        "Legends": "Recorded Legends",
+        "Fractures": "Name Fractures"
+      },
+      "Resources": { "Charges": "Tenth Life charges", "LegendaryPoints": "Legendary Points" },
+      "Hunger": {
+        "T3": "The weapon’s whisper",
+        "T5": "Predatory demand",
+        "T7": "Control save",
+        "T10": "True-name fracture"
+      },
+      "Debt": { "T3": "The Sovereign speaks", "T5": "Soul replacement" },
+      "Recharge": { "BloodQuestion": "Has the weapon tasted living blood since the previous dawn?" },
+      "Echo": {
+        "Permanent": "Permanent Hollow Echoes",
+        "PermanentHint": "Abilities captured from creatures that died before the theft expired.",
+        "Temporary": "Temporary Hollow Echoes",
+        "TemporaryHint": "Stolen abilities that expire after ten rounds unless their source dies.",
+        "Name": "Echo name",
+        "Category": "Category",
+        "Tier": "Power tier",
+        "Cost": "Charge cost",
+        "SoulDamage": "Soul damage",
+        "Description": "Playable corrupted form",
+        "Source": "Opaque source",
+        "Use": "Use Echo",
+        "Erase": "Erase",
+        "None": "No permanent Hollow Echo is available.",
+        "Used": "{echo} tears through Thar’gunn’s soul and manifests.",
+        "SoulDamageFlavor": "Hollow Echo soul damage",
+        "ErasureFailed": "The erasure fails (DC {dc}): {result}",
+        "ErasureTable": "Price of erasure",
+        "Erasure1": "6d10 psychic damage.",
+        "Erasure2": "Lose one Hit Die until Greater Restoration.",
+        "Erasure3": "Disadvantage on death saves until the next long rest.",
+        "Erasure4": "The erased ability manifests once against Thar’gunn.",
+        "Erasure5": "The weapon refuses another theft until a powerful creature is slain.",
+        "Erasure6": "Gain one Essence Debt."
+      },
+      "Legends": { "Collection": "Named Recorded Legends", "Name": "Legend name", "Description": "What made this deed mythic" },
+      "Siphon": {
+        "Action": "Siphon Essence",
+        "PickTitle": "Choose the Hollow Echo",
+        "PickHint": "Select the feature whose identity the weapon will attempt to steal.",
+        "NoFeature": "No supported feature was eligible for capture.",
+        "Resisted": "{target} resists the Siphon ({total} vs DC {dc}).",
+        "Captured": "{echo} is torn from {target} and becomes a Hollow Echo.",
+        "Suppressed": "Identity Siphoned",
+        "SuppressedUse": "That ability is temporarily suppressed by the Tenth Life Thief.",
+        "GmTitle": "Validate private Siphon",
+        "GmHint": "Revalidate owner, target, weapon, trigger and eligible feature without disclosing private actor data."
+      },
+      "Field": {
+        "Action": "Field of the Tenth March",
+        "Unavailable": "The Field needs at least one charge and cannot be used again before a long rest.",
+        "Activated": "The Field consumes {charges} charges; a 165-foot march of stolen earth follows Thar’gunn."
+      },
+      "Ultimate": {
+        "Name": "The March of the Tenth Legend",
+        "Action": "Activate Ultimate",
+        "Blocked": "Ultimate prerequisites failed",
+        "AccessTitle": "Who commands the Tenth March?",
+        "AccessBody": "Choose Wisdom or Charisma to resist the Nameless Sovereign.",
+        "ExpiryDamage": "Name Fracture settlement",
+        "Ended": "The Tenth March ends and every stolen name demands its price.",
+        "BlockSlot": "Choose an Echo slot to block from Name Fracture",
+        "IdentityRuling": "Resolve the identity fragment lost at ten Name Fractures"
+        ,"ThunderousStep": "Thunderous Step of Skeldr"
+        ,"ThunderousDamage": "Thunderous Step damage"
+        ,"ThunderousFailed": "{target} is hurled 60 feet, knocked prone, and loses reactions."
+        ,"SkeldrMove": "Skeldr moves 60 ft"
+        ,"SkeldrMoves": "Skeldr advances {distance} feet and arms Thunderous Step."
+        ,"MightyImpelAction": "Mighty Impel"
+        ,"MightyImpel": "Thar’gunn uses Mighty Impel against a Huge or smaller creature."
+        ,"DevastatingStrike": "Devastating Strike"
+        ,"DevastatingDamage": "Provisional Devastating Strike damage"
+        ,"LegendaryEcho": "Use a Hollow Echo"
+        ,"SecondSiphon": "Second Tenth Life Siphon"
+        ,"SkeldrRescue": "Skeldr preserves an ally at 1 HP"
+      },
+      "Rite": {
+        "Action": "Rite of the Tenth Legend",
+        "NeedsLegends": "The rite requires ten named Recorded Legends.",
+        "Success": "Thar’gunn names himself. The weapon answers to his legend, not the Sovereign.",
+        "Failure": "The rite fails: two Essence Debts and one blocked Echo slot.",
+        "BlockSlot": "Choose the Echo slot blocked by the failed rite",
+        "NameEscalation": "Two natural ones: resolve the Sovereign’s immediate attempt to take the true name"
+      },
+      "Purification": {
+        "Action": "Purification and recovery",
+        "Title": "Choose what the purification repairs",
+        "Hint": "Every recovery is selective, reversible, and recorded.",
+        "hunger": "Remove permanent Hunger",
+        "debt": "Clear Essence Debt",
+        "slot": "Unblock an Echo slot",
+        "skeldr": "Return Skeldr",
+        "fracture": "Repair Fracture max HP"
+      },
+      "Triggers": { "LongRest": "Long-rest recovery", "TurnStart": "Ultimate turn start", "TurnEnd": "Ultimate turn end" },
+      "Errors": { "NotEnoughCharges": "Not enough Tenth Life charges.", "SelectTarget": "Target one creature first." },
+      "Config": {
+        "Siphon": "Siphon and Echoes",
+        "SiphonBaseDc": "Siphon base DC",
+        "TemporarySeconds": "Temporary Echo duration (seconds)",
+        "Field": "Field of the Tenth March",
+        "FieldRadius": "Field radius (feet)",
+        "FieldSeconds": "Field duration (seconds)",
+        "Ultimate": "Native level-20 Ultimate",
+        "UltimateRounds": "Ultimate turns",
+        "StrikeDamage": "Provisional Devastating Strike dice",
+        "Skeldr": "Skeldr",
+        "SkeldrReturn": "Skeldr return days",
+        "Rite": "Rite and recovery",
+        "RiteDc": "Rite check DC"
+      }
     }
   }
 }

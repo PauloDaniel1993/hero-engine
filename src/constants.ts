@@ -7,6 +7,9 @@ export const SETTINGS = {
   dawnHour: "dawnHour",
   adjudicationQueue: "adjudicationQueue",
   pendingOps: "pendingOps",
+  backupEvidence: "backupEvidence",
+  theme: "theme",
+  clientTheme: "clientTheme",
   worldConfigPrefix: "config.", // + pluginId
 } as const;
 

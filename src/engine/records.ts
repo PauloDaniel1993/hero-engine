@@ -127,6 +127,74 @@ export async function ensureAttachmentReady(att: Attachment, plugin: MechanicPlu
       }
     }
   });
+  await reconcileRecordLifecycles(att, plugin, getContext);
+}
+
+function lifecycleExpired(record: MechanicRecord, transformActivationId?: string): boolean {
+  const lifecycle = record.lifecycle;
+  if (!lifecycle || lifecycle.type === "permanent" || lifecycle.type === "manual") return false;
+  if (lifecycle.type === "world-time") return lifecycle.worldTime !== undefined && Number(game.time?.worldTime ?? 0) >= lifecycle.worldTime;
+  if (lifecycle.type === "transform") return !transformActivationId || lifecycle.transformActivationId !== transformActivationId;
+  if (lifecycle.type === "combat-time") {
+    const combat = game.combat;
+    if (!combat || combat.uuid !== lifecycle.combatUuid) return true;
+    const current = Number(combat.round ?? 0) * 1000 + Number(combat.turn ?? 0);
+    const expiry = Number(lifecycle.round ?? 0) * 1000 + Number(lifecycle.turn ?? 0);
+    return current >= expiry;
+  }
+  return false;
+}
+
+async function removeSuppression(recordId: string): Promise<void> {
+  if (!game.user?.isGM) return;
+  for (const actor of game.actors ?? []) {
+    const ids = actor.effects?.filter?.((effect: any) => effect.getFlag?.("hero-engine", "suppressionId") === recordId).map((effect: any) => effect.id) ?? [];
+    if (ids.length) await actor.deleteEmbeddedDocuments?.("ActiveEffect", ids);
+  }
+}
+
+export async function reconcileRecordLifecycles(att: Attachment, plugin: MechanicPlugin, getContext: () => MechanicContext): Promise<string[]> {
+  if (!plugin.recordCollections?.length) return [];
+  const expired: string[] = [];
+  await mutateState(att.stateDoc, plugin.id, (state) => {
+    const activationId = state.transform?.activationId;
+    for (const def of plugin.recordCollections ?? []) {
+      const stored = ensureSlots(state, def, capacity(def, getContext()));
+      for (const slot of stored.slots) {
+        if (slot.record && lifecycleExpired(slot.record, activationId)) {
+          expired.push(slot.record.id);
+          appendAudit(state, `record ${def.id}/${slot.record.id} expired`);
+          slot.record = null;
+        }
+      }
+      stored.pending = stored.pending.filter((pending) => {
+        const remove = (pending.expiresAt !== undefined && Date.now() >= pending.expiresAt) || lifecycleExpired(pending.record, activationId);
+        if (remove) expired.push(pending.record.id);
+        return !remove;
+      });
+    }
+  });
+  for (const id of expired) await removeSuppression(id);
+  return expired;
+}
+
+/** Convert a temporary record to a permanent slot when its suppressed source dies. */
+export async function convertTemporaryRecord(recordId: string): Promise<boolean> {
+  if (!game.user?.isGM) return false;
+  for (const actor of game.actors ?? []) {
+    for (const att of (await import("./state")).resolveAttachments(actor)) {
+      const plugin = (await import("./registry")).getPlugin(att.pluginId);
+      const ctx = plugin ? (await import("./runtime")).makeContext(att) : null;
+      if (!plugin || !ctx || !plugin.recordCollections?.some((def) => def.id === "temporary-echoes") || !plugin.recordCollections.some((def) => def.id === "echoes")) continue;
+      const record = ctx.records.get("temporary-echoes", recordId);
+      if (!record) continue;
+      await ctx.records.create("echoes", record.data, { temporary: false, pendingWhenFull: true, lifecycle: { type: "permanent" }, idempotencyKey: `death-convert:${recordId}` });
+      await ctx.records.remove("temporary-echoes", recordId, `death-remove:${recordId}`);
+      await removeSuppression(recordId);
+      return true;
+    }
+  }
+  return false;
 }
 
 export function makeRecordAccessor(att: Attachment, plugin: MechanicPlugin, getContext: () => MechanicContext): RecordAccessor {

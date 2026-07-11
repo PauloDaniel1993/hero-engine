@@ -14,6 +14,7 @@ import { readState, resolveAttachments, type Attachment, type InstanceState } fr
 import { activeThresholds } from "../engine/trackers";
 import { escapeHtml } from "./chat-cards";
 import { createApp } from "./app-base";
+import { ensureAttachmentReady } from "../engine/records";
 
 export function registerSheetPanel(): void {
   const inject = (app: any, element: HTMLElement | any) => {
@@ -59,6 +60,11 @@ function injectMechanicsLauncher(root: HTMLElement, actor: any): void {
 }
 
 export function openActorMechanics(actor: any): any {
+  for (const att of resolveAttachments(actor)) {
+    const plugin = getPlugin(att.pluginId);
+    const ctx = plugin ? makeContext(att) : null;
+    if (plugin && ctx) void ensureAttachmentReady(att, plugin, () => ctx).then(() => actorMechanicsApps.get(actor.id)?.render());
+  }
   const current = actorMechanicsApps.get(actor.id);
   if (current) {
     current.render(true);

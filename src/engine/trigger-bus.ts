@@ -17,6 +17,7 @@ import { isAuthoritativeClient, onSocketMessage } from "./sockets";
 import { resolveAttachment, resolveAttachments } from "./state";
 import { endTransform, tickTransform } from "./transforms";
 import { enqueueDirect } from "./adjudications";
+import { convertTemporaryRecord, ensureAttachmentReady } from "./records";
 
 /** Dispatch one engine event to every subscribed mechanic on an actor. */
 export async function dispatchEvent(actor: any, event: EngineEvent, data?: Record<string, unknown>): Promise<void> {
@@ -86,6 +87,10 @@ export function initTriggerBus(): void {
       await dispatchEvent(actor, "damage-taken", { amount: prevHp - newHp });
     }
     if (newHp <= 0 && (typeof prevHp !== "number" || prevHp > 0)) {
+      for (const effect of actor.effects ?? []) {
+        const suppressionId = effect.getFlag?.("hero-engine", "suppressionId");
+        if (suppressionId) await convertTemporaryRecord(suppressionId);
+      }
       // Allies of the downed actor:
       for (const ally of combatAllies(actor)) {
         await dispatchEvent(ally, "ally-downed", { downedUuid: actor.uuid, downedName: actor.name });
@@ -98,6 +103,14 @@ export function initTriggerBus(): void {
   Hooks.on("updateCombat", async (combat: any, changes: any, _options: any, _userId: string) => {
     if (!isAuthoritativeClient()) return;
     if (changes.turn === undefined && changes.round === undefined) return;
+
+    for (const combatant of combat.combatants ?? []) {
+      for (const att of resolveAttachments(combatant.actor)) {
+        const plugin = getPlugin(att.pluginId);
+        const ctx = plugin ? makeContext(att) : null;
+        if (plugin && ctx) await ensureAttachmentReady(att, plugin, () => ctx);
+      }
+    }
 
     const previous = combat.previous;
     const prevCombatant = previous?.combatantId ? combat.combatants.get(previous.combatantId) : null;
@@ -134,6 +147,11 @@ export function initTriggerBus(): void {
     await handleWorldTime(prev, worldTime);
     for (const actor of game.actors ?? []) {
       if (resolveAttachments(actor).length) {
+        for (const att of resolveAttachments(actor)) {
+          const plugin = getPlugin(att.pluginId);
+          const ctx = plugin ? makeContext(att) : null;
+          if (plugin && ctx) await ensureAttachmentReady(att, plugin, () => ctx);
+        }
         await dispatchEvent(actor, "world-time-advanced", { worldTime, dt });
       }
     }

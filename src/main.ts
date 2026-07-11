@@ -8,7 +8,8 @@ import { fireRegistrationHook, getPlugin, listPlugins, registerPlugin } from "./
 import { ensureAttachmentReady } from "./engine/records";
 import { makeContext } from "./engine/runtime";
 import { isTransformedActor, resolveAttachments } from "./engine/state";
-import { registerCoreSettings } from "./engine/settings";
+import { initSuppressionGuard } from "./engine/suppression";
+import { applyTheme, registerCoreSettings } from "./engine/settings";
 import { initSockets, registerGmConfirmResponder } from "./engine/sockets";
 import { initTriggerBus } from "./engine/trigger-bus";
 import { registerChatCardListeners } from "./ui/chat-cards";
@@ -17,6 +18,7 @@ import { registerGmPanel } from "./ui/gm-panel";
 import { presaTempestade } from "./plugins/presa-tempestade";
 import { deimosConfessor } from "./plugins/deimos-confessor";
 import { exampleFlamingSword } from "./plugins/example-flaming-sword";
+import { thargunnMythic } from "./plugins/thargunn";
 
 const api = createApi();
 
@@ -30,7 +32,7 @@ Hooks.once("init", () => {
 Hooks.once("setup", () => {
   // Built-in reference plugins register through the same public API as
   // external ones (enforced by scripts/check-plugin-imports.mjs).
-  for (const plugin of [presaTempestade, deimosConfessor, exampleFlamingSword]) {
+  for (const plugin of [presaTempestade, deimosConfessor, exampleFlamingSword, thargunnMythic]) {
     try {
       registerPlugin(plugin);
     } catch (e) {
@@ -47,6 +49,8 @@ Hooks.once("ready", async () => {
   watchItemTransfers();
   registerChatCardListeners();
   registerSheetPanel();
+  initSuppressionGuard();
+  applyTheme();
   for (const actor of game.actors ?? []) {
     if (isTransformedActor(actor)) continue;
     for (const att of resolveAttachments(actor)) {

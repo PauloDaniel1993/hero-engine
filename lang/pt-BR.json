@@ -4,6 +4,16 @@
       "DawnHour": {
         "Name": "Hora do amanhecer",
         "Hint": "Hora do tempo de jogo (0-23) em que recargas 'ao amanhecer' acontecem. Padrão 6."
+      },
+      "Theme": {
+        "Name": "Tema do Hero Engine",
+        "Hint": "Tema visual padrão do mundo; cada cliente pode substituir localmente.",
+        "ClientName": "Substituição do tema do Hero Engine",
+        "ClientHint": "Use o tema do mundo ou escolha um tema apenas para este navegador.",
+        "WorldDefault": "Usar padrão do mundo",
+        "Basalt": "Basalto e trovão",
+        "Storm": "Tempestade profunda",
+        "Gold": "Ouro roubado"
       }
     },
     "Socket": {
@@ -141,6 +151,129 @@
       "Blocked": "Bloqueado",
       "Empty": "Espaço vazio",
       "Overflow": "Excedente"
+    },
+    "Thargunn": {
+      "Name": "Thar’gunn — A Décima Vida",
+      "Description": "O Ladrão da Décima Vida, Ecos Ocos, Fome, Skeldr e a Marcha da Décima Lenda.",
+      "Trackers": {
+        "WeaponLevel": "Nível da arma",
+        "HungerTemporary": "Fome temporária",
+        "HungerPermanent": "Fome permanente",
+        "EssenceDebt": "Dívida de Essência",
+        "Legends": "Lendas Gravadas",
+        "Fractures": "Fraturas de Nome"
+      },
+      "Resources": { "Charges": "Cargas da Décima Vida", "LegendaryPoints": "Pontos Lendários" },
+      "Hunger": {
+        "T3": "O sussurro da arma",
+        "T5": "Exigência predatória",
+        "T7": "Teste de controle",
+        "T10": "Fratura do nome verdadeiro"
+      },
+      "Debt": { "T3": "O Soberano fala", "T5": "Substituição da alma" },
+      "Recharge": { "BloodQuestion": "A arma provou sangue vivo desde o amanhecer anterior?" },
+      "Echo": {
+        "Permanent": "Ecos Ocos permanentes",
+        "PermanentHint": "Habilidades capturadas de criaturas que morreram antes do roubo expirar.",
+        "Temporary": "Ecos Ocos temporários",
+        "TemporaryHint": "Habilidades roubadas que expiram em dez rodadas, salvo se a fonte morrer.",
+        "Name": "Nome do Eco",
+        "Category": "Categoria",
+        "Tier": "Escala de poder",
+        "Cost": "Custo em cargas",
+        "SoulDamage": "Dano na alma",
+        "SoulDamageFlavor": "Dano na alma do Eco Oco",
+        "Description": "Forma corrompida jogável",
+        "Source": "Fonte opaca",
+        "Use": "Usar Eco",
+        "Erase": "Apagar",
+        "None": "Nenhum Eco Oco permanente está disponível.",
+        "Used": "{echo} rasga a alma de Thar’gunn e se manifesta.",
+        "ErasureFailed": "O apagamento falha (CD {dc}): {result}",
+        "ErasureTable": "Preço do apagamento",
+        "Erasure1": "6d10 de dano psíquico.",
+        "Erasure2": "Perde um Dado de Vida até Restauração Maior.",
+        "Erasure3": "Desvantagem em testes de morte até o próximo descanso longo.",
+        "Erasure4": "A habilidade apagada se manifesta uma vez contra Thar’gunn.",
+        "Erasure5": "A arma recusa novo roubo até uma criatura poderosa ser morta.",
+        "Erasure6": "Ganha uma Dívida de Essência."
+      },
+      "Legends": { "Collection": "Lendas Gravadas nomeadas", "Name": "Nome da lenda", "Description": "O que tornou o feito mítico" },
+      "Siphon": {
+        "Action": "Sifão de Essência",
+        "PickTitle": "Escolha o Eco Oco",
+        "PickHint": "Selecione a característica cuja identidade a arma tentará roubar.",
+        "NoFeature": "Nenhuma característica suportada estava elegível para captura.",
+        "Resisted": "{target} resiste ao Sifão ({total} contra CD {dc}).",
+        "Captured": "{echo} é arrancado de {target} e se torna um Eco Oco.",
+        "Suppressed": "Identidade Sifonada",
+        "SuppressedUse": "Essa habilidade está temporariamente suprimida pelo Ladrão da Décima Vida.",
+        "GmTitle": "Validar Sifão privado",
+        "GmHint": "Revalide dono, alvo, arma, gatilho e característica sem revelar dados privados."
+      },
+      "Field": {
+        "Action": "Campo da Décima Marcha",
+        "Unavailable": "O Campo exige ao menos uma carga e só retorna após descanso longo.",
+        "Activated": "O Campo consome {charges} cargas; uma marcha de 165 pés de terra roubada segue Thar’gunn."
+      },
+      "Ultimate": {
+        "Name": "A Marcha da Décima Lenda",
+        "Action": "Ativar Ultimate",
+        "Blocked": "Pré-requisitos da Ultimate falharam",
+        "AccessTitle": "Quem comanda a Décima Marcha?",
+        "AccessBody": "Escolha Sabedoria ou Carisma para resistir ao Soberano Sem Nome.",
+        "ExpiryDamage": "Acerto de contas das Fraturas de Nome",
+        "Ended": "A Décima Marcha termina e cada nome roubado exige seu preço.",
+        "BlockSlot": "Escolha um espaço de Eco para bloquear por Fratura de Nome",
+        "IdentityRuling": "Resolva o fragmento de identidade perdido em dez Fraturas"
+        ,"ThunderousStep": "Passo Trovejante de Skeldr"
+        ,"ThunderousDamage": "Dano do Passo Trovejante"
+        ,"ThunderousFailed": "{target} é arremessado 60 pés, cai no chão e perde reações."
+        ,"SkeldrMove": "Skeldr se move 60 pés"
+        ,"SkeldrMoves": "Skeldr avança {distance} pés e arma o Passo Trovejante."
+        ,"MightyImpelAction": "Mighty Impel"
+        ,"MightyImpel": "Thar’gunn usa Mighty Impel contra criatura Enorme ou menor."
+        ,"DevastatingStrike": "Golpe Devastador"
+        ,"DevastatingDamage": "Dano provisório do Golpe Devastador"
+        ,"LegendaryEcho": "Usar um Eco Oco"
+        ,"SecondSiphon": "Segundo Sifão da Décima Vida"
+        ,"SkeldrRescue": "Skeldr preserva um aliado com 1 PV"
+      },
+      "Rite": {
+        "Action": "Rito da Décima Lenda",
+        "NeedsLegends": "O rito exige dez Lendas Gravadas nomeadas.",
+        "Success": "Thar’gunn nomeia a si mesmo. A arma responde à lenda, não ao Soberano.",
+        "Failure": "O rito falha: duas Dívidas de Essência e um espaço de Eco bloqueado.",
+        "BlockSlot": "Escolha o espaço de Eco bloqueado pelo rito fracassado",
+        "NameEscalation": "Dois 1 naturais: resolva a tentativa imediata de tomar o nome verdadeiro"
+      },
+      "Purification": {
+        "Action": "Purificação e recuperação",
+        "Title": "Escolha o que a purificação repara",
+        "Hint": "Toda recuperação é seletiva, reversível e registrada.",
+        "hunger": "Remover Fome permanente",
+        "debt": "Limpar Dívida de Essência",
+        "slot": "Desbloquear espaço de Eco",
+        "skeldr": "Retornar Skeldr",
+        "fracture": "Reparar PV máximos de Fratura"
+      },
+      "Triggers": { "LongRest": "Recuperação de descanso longo", "TurnStart": "Início do turno da Ultimate", "TurnEnd": "Fim do turno da Ultimate" },
+      "Errors": { "NotEnoughCharges": "Cargas da Décima Vida insuficientes.", "SelectTarget": "Selecione uma criatura como alvo primeiro." },
+      "Config": {
+        "Siphon": "Sifão e Ecos",
+        "SiphonBaseDc": "CD base do Sifão",
+        "TemporarySeconds": "Duração do Eco temporário (segundos)",
+        "Field": "Campo da Décima Marcha",
+        "FieldRadius": "Raio do Campo (pés)",
+        "FieldSeconds": "Duração do Campo (segundos)",
+        "Ultimate": "Ultimate nativa nível 20",
+        "UltimateRounds": "Turnos da Ultimate",
+        "StrikeDamage": "Dados provisórios do Golpe Devastador",
+        "Skeldr": "Skeldr",
+        "SkeldrReturn": "Dias para retorno de Skeldr",
+        "Rite": "Rito e recuperação",
+        "RiteDc": "CD dos testes do rito"
+      }
     }
   }
 }
