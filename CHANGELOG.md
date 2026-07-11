@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.4 — 2026-07-11
+
+- Emit a mechanic-settled event after every action and record action finishes,
+  including Siphon flows launched from sheet activities, macros, or chat cards.
+- Include runtime, canonical, and state-owner actor identities so an Ultimate
+  actor-swap popout refreshes when canonical Thar’gunn state changes.
+- Keep document-driven refresh as a cross-client fallback for authoritative GM
+  settlements and embedded Item/Active Effect updates.
+
 ## 1.0.3 — 2026-07-11
 
 - Refresh open Mechanics popouts automatically after actor flag, embedded
