@@ -72,9 +72,36 @@ export function openActorMechanics(actor: any): any {
     return current;
   }
   let refreshTimer: ReturnType<typeof setTimeout> | null = null;
-  const scheduleRefresh = () => {
+  let closed = false;
+  const hookRegistrations: { event: string; id: number }[] = [];
+  const scrollState: { window: number; collections: Record<string, number> } = { window: 0, collections: {} };
+  const captureScroll = () => {
+    const element = document.getElementById(`hero-engine-actor-mechanics-${actor.id}`);
+    const content = element?.querySelector<HTMLElement>(".window-content") ?? element?.querySelector<HTMLElement>(".hero-engine-actor-window")?.parentElement;
+    if (content) scrollState.window = content.scrollTop;
+    element?.querySelectorAll<HTMLElement>("[data-he-collection]").forEach((collection) => {
+      const id = collection.dataset["heCollection"];
+      const list = collection.querySelector<HTMLElement>(".he-record-list");
+      if (id && list) scrollState.collections[id] = list.scrollTop;
+    });
+  };
+  const restoreScroll = (root: HTMLElement) => requestAnimationFrame(() => {
+    const element = root.closest<HTMLElement>(".application") ?? root;
+    const content = element.querySelector<HTMLElement>(".window-content") ?? root;
+    content.scrollTop = scrollState.window;
+    element.querySelectorAll<HTMLElement>("[data-he-collection]").forEach((collection) => {
+      const id = collection.dataset["heCollection"];
+      const list = collection.querySelector<HTMLElement>(".he-record-list");
+      if (id && list && scrollState.collections[id] !== undefined) list.scrollTop = scrollState.collections[id]!;
+    });
+  });
+  const scheduleRefresh = (delay = 90) => {
+    if (closed) return;
     if (refreshTimer) clearTimeout(refreshTimer);
-    refreshTimer = setTimeout(() => app.render(), 650);
+    refreshTimer = setTimeout(() => {
+      captureScroll();
+      void app.render();
+    }, delay);
   };
   const estimatedHeight = Math.min(760, Math.max(480, 120 + resolveAttachments(actor).reduce((sum, attachment) => {
     const plugin = getPlugin(attachment.pluginId);
@@ -90,22 +117,40 @@ export function openActorMechanics(actor: any): any {
     height: estimatedHeight,
     render: () => `<div class="hero-engine-actor-window">${renderPanel(actor, resolveAttachments(actor))}</div>`,
     bind: (root) => {
-      bindPanel(root, actor);
-      root.addEventListener("click", (event) => {
-        if ((event.target as HTMLElement).closest("button[data-he]")) scheduleRefresh();
-      });
-      root.addEventListener("change", (event) => {
-        if ((event.target as HTMLElement).closest("select[data-he]")) scheduleRefresh();
-      });
+      bindPanel(root, actor, () => scheduleRefresh(0));
+      restoreScroll(root);
     },
     onClose: () => {
+      closed = true;
       if (refreshTimer) clearTimeout(refreshTimer);
+      for (const registration of hookRegistrations) Hooks.off(registration.event, registration.id);
       actorMechanicsApps.delete(actor.id);
     },
   });
   actorMechanicsApps.set(actor.id, app);
+  const watch = (event: string) => {
+    const id = Hooks.on(event, (document: any) => {
+      const related = new Set<string>([actor.id]);
+      for (const attachment of resolveAttachments(actor)) {
+        related.add((attachment.actor as any)?.id);
+        related.add((attachment.canonicalActor as any)?.id);
+        related.add((attachment.stateDoc as any)?.id);
+      }
+      const documentActorId = mechanicsDocumentActorId(document);
+      if (documentActorId && related.has(documentActorId)) scheduleRefresh();
+    });
+    hookRegistrations.push({ event, id });
+  };
+  for (const event of ["updateActor", "createItem", "updateItem", "deleteItem", "createActiveEffect", "updateActiveEffect", "deleteActiveEffect"]) watch(event);
   app.render(true);
   return app;
+}
+
+export function mechanicsDocumentActorId(document: any): string | undefined {
+  if (document?.documentName === "Actor") return document.id;
+  if (document?.actor?.id) return document.actor.id;
+  if (document?.parent?.documentName === "Actor") return document.parent.id;
+  return document?.parent?.actor?.id;
 }
 
 function renderPanel(actor: any, attachments: Attachment[]): string {
@@ -295,7 +340,7 @@ function regionAttributes(key: string, defaultOpen: boolean): string {
   return `data-he-region-key="${escapeHtml(key)}"${open ? " open" : ""}`;
 }
 
-function bindPanel(root: HTMLElement, actor: any): void {
+function bindPanel(root: HTMLElement, actor: any, onMutation: () => void): void {
   const panel = root.querySelector<HTMLElement>(".hero-engine-panel");
   if (!panel || panel.dataset["heBound"]) return;
   panel.dataset["heBound"] = "1";
@@ -364,6 +409,8 @@ function bindPanel(root: HTMLElement, actor: any): void {
     } catch (e) {
       console.error("hero-engine | panel", e);
       ui.notifications?.error(String(e));
+    } finally {
+      onMutation();
     }
   });
 
@@ -372,7 +419,11 @@ function bindPanel(root: HTMLElement, actor: any): void {
     if (!select) return;
     const att = resolveAttachments(actor).find((a) => a.pluginId === select.dataset["plugin"]);
     if (!att) return;
-    await setStance(att, select.dataset["id"]!, select.value === "" ? null : select.value);
+    try {
+      await setStance(att, select.dataset["id"]!, select.value === "" ? null : select.value);
+    } finally {
+      onMutation();
+    }
   });
 }
 
