@@ -1,0 +1,30 @@
+schema: spec-driven
+
+context: |
+  Hero Engine is a Foundry VTT v13/v14 module for the dnd5e system 4.0+.
+  Source is TypeScript bundled with Vite; tests use Vitest and Node 20+.
+  Mechanics are typed plugins registered through src/api/types.ts. Built-in
+  plugins may import only the public API. Numeric rules should be exposed
+  through the generated world and per-attachment configuration UI.
+  The deployment world is The Lost Ruins on Foundry v14 build 361 with dnd5e
+  5.3.3, Midi-QOL, DAE, Sequencer, DDB Importer, and Tidy 5e Sheet.
+  Portuguese (pt-BR) is the semantic source for bespoke character mechanics;
+  every shipped feature must also include a complete English localization.
+  The installed module contains locally improved UI behavior that must be
+  reconciled into source before rebuilding so the repository build does not
+  regress the current GM panel, search/filter dialogs, actor-sheet launcher,
+  mechanics popout, or open-section persistence.
+
+rules:
+  proposal:
+    - State explicit non-goals and migration/deployment risk.
+    - Separate reusable engine capabilities from Thar'gunn-specific content.
+  specs:
+    - Use testable SHALL requirements and concrete Given/When/Then scenarios.
+    - Cover permissions, state migration, combat timing, world time, and recovery.
+  design:
+    - Document authoritative state ownership and GM-client socket boundaries.
+    - Include rollback, idempotent reconciliation, and future Ascended migration.
+  tasks:
+    - Include automated, live-world, and T3 browser-controlled verification.
+    - Require backup before any live actor or installed-module mutation.
