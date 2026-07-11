@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { managedActivityId, previewThargunnInstall } from "../src/managed/thargunn-installer";
+import { managedActivityId, previewThargunnInstall, ultimateRageEffectSource, ultimateWeaponRangeUpdate } from "../src/managed/thargunn-installer";
 
 function collection<T extends { id: string; name?: string }>(entries: T[]) {
   const value: any = entries;
@@ -48,5 +48,26 @@ describe("managed Thar’gunn installer preview", () => {
     expect(first).toMatch(/^[A-Za-z0-9]+$/);
     expect(managedActivityId("thargunn.feature.field")).toBe(first);
     expect(managedActivityId("thargunn.feature.siphon")).not.toBe(first);
+  });
+
+  it("carries Rage into the Ultimate form without consuming another use", () => {
+    const source: any = ultimateRageEffectSource();
+    expect(source.statuses).toContain("rage");
+    expect(source.transfer).toBe(false);
+    expect(source.changes).toEqual(expect.arrayContaining([
+      expect.objectContaining({ key: "system.bonuses.mwak.damage", value: "@scale.barbarian.rage-damage" }),
+      expect.objectContaining({ key: "system.abilities.str.save.roll.mode", value: 1 }),
+      expect.objectContaining({ key: "system.abilities.str.check.roll.mode", value: 1 }),
+    ]));
+    expect(source.flags["hero-engine"].managed.key).toBe("thargunn.effect.ultimate-rage");
+  });
+
+  it("writes Ultimate melee reach to the dnd5e reach field", () => {
+    expect(ultimateWeaponRangeUpdate()).toEqual({
+      "system.range.value": null,
+      "system.range.long": null,
+      "system.range.reach": 10,
+      "system.range.units": "ft",
+    });
   });
 });

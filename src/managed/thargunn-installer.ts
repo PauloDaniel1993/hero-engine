@@ -5,7 +5,7 @@ import { resolveAttachment } from "../engine/state";
 import { skeldrStats } from "../plugins/thargunn/rules";
 
 const CONTENT_VERSION = 1;
-const TEMPLATE_VERSION = 1;
+const TEMPLATE_VERSION = 2;
 const DEFAULT_BASE_ID = "Owx9HA0KRtcB8xWe";
 const DEFAULT_ULTIMATE_ID = "VJ2nFvMjvYiHIO7w";
 const SOURCE_WEAPON_ID = "m2guptM3HxmWjIsH";
@@ -31,6 +31,43 @@ function stableHash(value: unknown): string {
 
 function metadata(key: string, source: unknown, extra: Partial<ManagedMetadata> = {}): ManagedMetadata {
   return { key, contentVersion: CONTENT_VERSION, templateVersion: TEMPLATE_VERSION, sourceHash: stableHash(source), ...extra };
+}
+
+export const ULTIMATE_WEAPON_REACH = 10;
+
+/** dnd5e 5.x stores melee reach separately from ranged distance. */
+export function ultimateWeaponRangeUpdate(): Record<string, unknown> {
+  return {
+    "system.range.value": null,
+    "system.range.long": null,
+    "system.range.reach": ULTIMATE_WEAPON_REACH,
+    "system.range.units": "ft",
+  };
+}
+
+/**
+ * The base character has already spent Rage to satisfy the Ultimate
+ * prerequisite. This form effect carries that state into the dnd5e actor swap
+ * without consuming a second use of the Rage Item.
+ */
+export function ultimateRageEffectSource(): Record<string, unknown> {
+  const key = "thargunn.effect.ultimate-rage";
+  const changes = [
+    { key: "system.bonuses.mwak.damage", mode: 2, value: "@scale.barbarian.rage-damage", priority: 20 },
+    { key: "system.traits.dr.value", mode: 2, value: "bludgeoning", priority: 20 },
+    { key: "system.traits.dr.value", mode: 2, value: "piercing", priority: 20 },
+    { key: "system.traits.dr.value", mode: 2, value: "slashing", priority: 20 },
+    { key: "system.abilities.str.save.roll.mode", mode: 2, value: 1, priority: 20 },
+    { key: "system.abilities.str.check.roll.mode", mode: 2, value: 1, priority: 20 },
+  ];
+  return {
+    name: "Fúria da Décima Marcha",
+    img: "icons/creatures/abilities/mouth-teeth-human.webp",
+    transfer: false,
+    statuses: ["rage"],
+    changes,
+    flags: { [MODULE_ID]: { managed: metadata(key, { statuses: ["rage"], changes }) } },
+  };
 }
 
 function keyOf(doc: any): string | undefined { return doc?.getFlag?.(MODULE_ID, "managed")?.key ?? doc?.flags?.[MODULE_ID]?.managed?.key; }
@@ -65,7 +102,7 @@ export async function previewThargunnInstall(options: { baseActorId?: string; ul
   if (!ultimate) report.warnings.push("Thar’gunn - Ultimate actor was not found.");
   if (!base || !ultimate) return report;
   report.changes.push({ kind: "Actor", key: "thargunn.actor.base", action: keyOf(base) ? "update" : "adopt", documentUuid: base.uuid, details: ["managed metadata", "preserve biography, inventory, ownership and token identity"] });
-  report.changes.push({ kind: "Actor", key: "thargunn.actor.ultimate", action: keyOf(ultimate) ? "update" : "adopt", documentUuid: ultimate.uuid, details: ["native level-20 form", "Huge 3×3 prototype", "preserve unrelated character fields"] });
+  report.changes.push({ kind: "Actor", key: "thargunn.actor.ultimate", action: keyOf(ultimate) ? "update" : "adopt", documentUuid: ultimate.uuid, details: ["native level-20 form", "automatic Rage", "Huge 3×3 prototype", "preserve unrelated character fields"] });
   const existingSkeldr = findActor("thargunn.actor.skeldr");
   report.changes.push({ kind: "Actor", key: "thargunn.actor.skeldr", action: existingSkeldr ? "update" : "create", documentUuid: existingSkeldr?.uuid, details: ["Huge guardian", "mirror Thar’gunn owners", "scaled combat statistics"] });
   const managedWeapon = findItem(base, "thargunn.item.weapon");
@@ -73,7 +110,7 @@ export async function previewThargunnInstall(options: { baseActorId?: string; ul
   if (!managedWeapon && !sourceWeapon) report.warnings.push("The recorded Nine Lives Stealer Halberd source item is missing; DDB repair cannot adopt it automatically.");
   else report.changes.push({ kind: "Item", key: "thargunn.item.weapon", action: managedWeapon ? "update" : "adopt", documentUuid: (managedWeapon ?? sourceWeapon)?.uuid, details: ["name/art/description", "three weapon-form activities", "preserve attunement and unrelated DDB fields"] });
   const ultimateWeapon = findItem(ultimate, "thargunn.item.weapon") ?? ultimate.items?.find((item: any) => item.name === "Nine Lives Stealer Halberd" || item.name === "Ladrão da Décima Vida");
-  if (ultimateWeapon) report.changes.push({ kind: "Item", key: "thargunn.item.weapon", action: findItem(ultimate, "thargunn.item.weapon") ? "update" : "adopt", documentUuid: ultimateWeapon.uuid, details: ["Ultimate copy", "same three managed weapon forms"] });
+  if (ultimateWeapon) report.changes.push({ kind: "Item", key: "thargunn.item.weapon", action: findItem(ultimate, "thargunn.item.weapon") ? "update" : "adopt", documentUuid: ultimateWeapon.uuid, details: ["Ultimate copy", "10-foot melee reach", "same three managed weapon forms"] });
   for (const [key] of featureTemplates) report.changes.push({ kind: "Item", key, action: findItem(base, key) ? "update" : "create", details: ["managed feature", "stable workflow key"] });
   for (const [key] of macroTemplates) report.changes.push({ kind: "Macro", key, action: findMacro(key) ? "update" : "create", details: ["stable Hero Engine API command"] });
   if (!resolveAttachment(base, "thargunn-mythic")) report.changes.push({ kind: "Attachment", key: "thargunn-mythic", action: "create", documentUuid: base.uuid, details: ["fresh level-1 state", "5 charges", "3 empty Echo slots"] });
@@ -114,7 +151,7 @@ async function reconcileWeapon(base: any, ultimate = false): Promise<any | null>
     img: "modules/hero-engine/assets/thargunn/tenth-life-thief.webp",
     "system.identifier": "ladrao-da-decima-vida",
     "system.description.value": description,
-    ...(ultimate ? { "system.range.value": 20, "system.range.units": "ft" } : {}),
+    ...(ultimate ? ultimateWeaponRangeUpdate() : {}),
     "system.activities": activities,
     [`flags.${MODULE_ID}.managed`]: metadata("thargunn.item.weapon", { description, activities: 3 }),
   });
@@ -212,6 +249,11 @@ async function reconcileUltimate(ultimate: any): Promise<void> {
   };
   if (resistance) await resistance.update(resistanceSource);
   else await ultimate.createEmbeddedDocuments?.("ActiveEffect", [resistanceSource]);
+  const rageKey = "thargunn.effect.ultimate-rage";
+  const rage = ultimate.effects?.find?.((effect: any) => effect.getFlag?.(MODULE_ID, "managed")?.key === rageKey);
+  const rageSource = ultimateRageEffectSource();
+  if (rage) await rage.update(rageSource);
+  else await ultimate.createEmbeddedDocuments?.("ActiveEffect", [rageSource]);
   const features = [
     ["thargunn.ultimate.legendary-points", "Pontos Lendários", "Three points refresh at the start of each Thar’gunn turn and expire at the next.", "mighty-impel"],
     ["thargunn.ultimate.thunderous-step", "Passo Trovejante de Skeldr", "After 20 feet of Skeldr movement, the next weapon hit gains 8d12 thunder and 8d12 force.", "skeldr-move"],
