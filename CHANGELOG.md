@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.10 — 2026-07-11
+
+- Apply Ultimate expiry damage and persistent consequence effects to canonical
+  Thar’gunn after dnd5e deletes the temporary transformed Actor.
+- Complete Legendary Point and Ultimate-state cleanup after both automatic and
+  owner-triggered de-transformation.
+
 ## 1.0.9 — 2026-07-11
 
 - Recover a player's persisted Ultimate approval request when the GM logs in
