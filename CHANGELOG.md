@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.12 — 2026-07-11
+
+- Stack the halberd's native 10-foot reach, Demiurgic Colossus Rage bonus, and
+  Tenth Legend Ultimate bonus for a 30-foot raging Ultimate melee reach.
+- Repair both the managed Ultimate template and any already-active transformed
+  actor when Hero Engine loads.
+
 ## 1.0.11 — 2026-07-11
 
 - Bound the GM Control Panel to the viewport and add a visible vertical scroll
