@@ -32,7 +32,7 @@ describe("Thar’gunn eligible feature extraction", () => {
   });
 
   it("recognizes dnd5e actor effects and recent DDB Rage activity cards", () => {
-    const actor: any = { id: "base", statuses: new Set(), effects: [], items: [{ id: "rage-item", name: "Rage", system: { identifier: "rage" } }] };
+    const actor: any = { id: "base", statuses: new Set(), effects: [], items: [{ id: "rage-item", name: "Rage", system: { identifier: "rage", uses: { spent: 1 } } }] };
     (globalThis as any).game = { time: { worldTime: 100 }, messages: { contents: [{ timestamp: 9_900, speaker: { actor: "base" }, flags: { dnd5e: { item: { id: "rage-item" } } } }] } };
     expect(isRaging(actor, undefined, 10_000)).toBe(true);
     (globalThis as any).game.messages.contents = [];
@@ -41,10 +41,10 @@ describe("Thar’gunn eligible feature extraction", () => {
   });
 
   it("rejects stale Rage cards and accepts the bounded Hero Engine use anchor", () => {
-    const actor: any = { id: "base", statuses: new Set(), effects: [], items: [{ id: "rage-item", system: { identifier: "rage" } }] };
+    const actor: any = { id: "base", statuses: new Set(), effects: [], items: [{ id: "rage-item", system: { identifier: "rage", uses: { spent: 1 } } }] };
     (globalThis as any).game = { time: { worldTime: 500 }, messages: { contents: [{ timestamp: 1, speaker: { actor: "base" }, flags: { dnd5e: { item: { id: "rage-item" } } } }] } };
-    expect(isRaging(actor, undefined, 700_002)).toBe(false);
+    expect(isRaging(actor, undefined, 3_700_002)).toBe(false);
     const ctx: any = { state: { getFlag: (key: string) => key === "rageExpiresAtWorldTime" ? 501 : 0 } };
-    expect(isRaging(actor, ctx, 700_002)).toBe(true);
+    expect(isRaging(actor, ctx, 3_700_002)).toBe(true);
   });
 });

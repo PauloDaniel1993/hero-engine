@@ -30,8 +30,13 @@ export function isRaging(actor: any, ctx?: MechanicContext, now = Date.now()): b
   const worldExpiry = Number(ctx?.state.getFlag<number>("rageExpiresAtWorldTime") ?? 0);
   if (realExpiry >= now || worldExpiry > Number(game.time?.worldTime ?? 0)) return true;
   const ids = rageItemIds(actor);
+  const hasConsumedRage = [...(actor.items ?? [])].some((item: any) => ids.has(item.id) && Number(item.system?.uses?.spent ?? 0) > 0);
+  if (!hasConsumedRage) return false;
   return [...(game.messages?.contents ?? [])].slice(-100).some((message: any) => {
-    if (message.speaker?.actor !== actor.id || now - Number(message.timestamp ?? 0) > 600_000) return false;
+    // Compatibility fallback for DDB/Midi setups that leave the Rage effect on
+    // the Item instead of transferring it. Future uses receive world-time flags
+    // from the dnd5e.useActivity hook above; keep this bounded legacy bridge.
+    if (message.speaker?.actor !== actor.id || now - Number(message.timestamp ?? 0) > 3_600_000) return false;
     const itemId = message.flags?.dnd5e?.item?.id;
     const activityUuid = String(message.flags?.dnd5e?.activity?.uuid ?? "");
     return ids.has(itemId) || [...ids].some((id) => activityUuid.includes(`.Item.${id}.`));
