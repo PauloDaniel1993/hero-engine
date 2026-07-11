@@ -85,6 +85,8 @@ html[data-hero-engine-theme="storm"] #scene-controls [data-tool="hero-engine-gm"
 .hero-engine-panel .he-mechanic[open] > .he-mechanic-header > .he-region-chevron { transform: rotate(180deg); }
 .hero-engine-panel .he-mechanic:not([open]) > .he-mechanic-header { border-bottom-color: transparent; }
 .hero-engine-panel .he-mechanic-content { display: flow-root; }
+.hero-engine-panel details.he-mechanic:not([open]) > .he-mechanic-content,
+.hero-engine-panel details.he-region:not([open]) > .he-region-content { display: none !important; }
 .hero-engine-panel .he-mechanic-header h3 { margin: 0; border: 0; color: #fff; font-size: 0.85rem; }
 .hero-engine-panel .he-mechanic-header p { margin: 0.2rem 0 0; color: rgba(255, 255, 255, 0.55); font-size: 0.64rem; line-height: 1.35; }
 .hero-engine-panel .he-mechanic-header > span {
