@@ -263,6 +263,25 @@ async function reconcileUltimate(ultimate: any): Promise<void> {
   for (const feature of features) await reconcileFeature(ultimate, feature as any);
 }
 
+/** Repair projections on a dnd5e-created Ultimate actor, including forms that
+ * were already active when Hero Engine was updated or reloaded. */
+export async function reconcileUltimateRuntimeActor(actor: any): Promise<boolean> {
+  if (keyOf(actor) !== "thargunn.actor.ultimate") return false;
+  const originalId = actor.getFlag?.("dnd5e", "originalActor");
+  const original = originalId ? game.actors?.get?.(originalId) : null;
+  if (!original || !resolveAttachment(original, "thargunn-mythic")) return false;
+
+  const weapon = findItem(actor, "thargunn.item.weapon");
+  if (weapon) await weapon.update(ultimateWeaponRangeUpdate());
+
+  const rageKey = "thargunn.effect.ultimate-rage";
+  const rage = actor.effects?.find?.((effect: any) => effect.getFlag?.(MODULE_ID, "managed")?.key === rageKey);
+  const rageSource = ultimateRageEffectSource();
+  if (rage) await rage.update(rageSource);
+  else await actor.createEmbeddedDocuments?.("ActiveEffect", [rageSource]);
+  return true;
+}
+
 async function reconcileMacro([key, name, command]: typeof macroTemplates[number]): Promise<any> {
   const current = findMacro(key);
   const data = { name, type: "script", command, img: "modules/hero-engine/assets/thargunn/icons/echo-trait.webp", ownership: { default: 2 }, flags: { [MODULE_ID]: { managed: metadata(key, { name, command }) } } };
@@ -302,6 +321,12 @@ let hooksRegistered = false;
 export function initThargunnManagedHooks(): void {
   if (hooksRegistered) return;
   hooksRegistered = true;
+  for (const actor of game.actors ?? []) {
+    void reconcileUltimateRuntimeActor(actor).catch((error) => console.error("hero-engine | Ultimate runtime reconciliation", error));
+  }
+  Hooks.on("createActor", (actor: any) => {
+    void reconcileUltimateRuntimeActor(actor).catch((error) => console.error("hero-engine | Ultimate runtime reconciliation", error));
+  });
   Hooks.on("dnd5e.useActivity", async (activity: any) => {
     const item = activity?.item;
     const actor = item?.actor;

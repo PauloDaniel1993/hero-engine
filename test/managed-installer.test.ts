@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { managedActivityId, previewThargunnInstall, ultimateRageEffectSource, ultimateWeaponRangeUpdate } from "../src/managed/thargunn-installer";
+import { managedActivityId, previewThargunnInstall, reconcileUltimateRuntimeActor, ultimateRageEffectSource, ultimateWeaponRangeUpdate } from "../src/managed/thargunn-installer";
 
 function collection<T extends { id: string; name?: string }>(entries: T[]) {
   const value: any = entries;
@@ -69,5 +69,27 @@ describe("managed Thar’gunn installer preview", () => {
       "system.range.reach": 10,
       "system.range.units": "ft",
     });
+  });
+
+  it("repairs Rage and reach on an already-active dnd5e Ultimate actor", async () => {
+    const weapon = { update: async (changes: Record<string, unknown>) => { (weapon as any).changes = changes; }, getFlag: (_scope: string, key: string) => key === "managed" ? { key: "thargunn.item.weapon" } : undefined };
+    const created: any[] = [];
+    const original = {
+      id: "base",
+      items: collection([]),
+      getFlag: (scope: string, key: string) => scope === "hero-engine" && key === "attachments" ? { "thargunn-mythic": {} } : undefined,
+    };
+    const runtime = {
+      items: collection<any>([weapon as any]), effects: collection([]),
+      getFlag: (scope: string, key: string) => scope === "hero-engine" && key === "managed" ? { key: "thargunn.actor.ultimate" }
+        : scope === "dnd5e" && key === "originalActor" ? "base" : undefined,
+      createEmbeddedDocuments: async (_type: string, sources: any[]) => { created.push(...sources); },
+    };
+    (globalThis as any).game = { actors: { get: (id: string) => id === "base" ? original : null } };
+
+    expect(await reconcileUltimateRuntimeActor(runtime)).toBe(true);
+    expect((weapon as any).changes["system.range.reach"]).toBe(10);
+    expect(created).toHaveLength(1);
+    expect(created[0].statuses).toContain("rage");
   });
 });
