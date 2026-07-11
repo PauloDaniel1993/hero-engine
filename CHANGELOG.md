@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.3 — 2026-07-11
+
+- Refresh open Mechanics popouts automatically after actor flag, embedded
+  Item, and Active Effect changes.
+- Refresh again when an in-window action, record action, trigger, adjustment,
+  pending replacement, or stance workflow has fully settled.
+- Debounce multi-document Foundry updates and preserve window/collection
+  scroll positions, disclosure state, search text, and filters while rendering.
+
 ## 1.0.2 — 2026-07-11
 
 - Make the complete Mechanics card and every character, active-state,
