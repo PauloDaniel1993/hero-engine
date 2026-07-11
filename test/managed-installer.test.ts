@@ -66,7 +66,7 @@ describe("managed Thar’gunn installer preview", () => {
     expect(ultimateWeaponRangeUpdate()).toEqual({
       "system.range.value": null,
       "system.range.long": null,
-      "system.range.reach": 10,
+      "system.range.reach": 30,
       "system.range.units": "ft",
     });
   });
@@ -88,7 +88,7 @@ describe("managed Thar’gunn installer preview", () => {
     (globalThis as any).game = { actors: { get: (id: string) => id === "base" ? original : null } };
 
     expect(await reconcileUltimateRuntimeActor(runtime)).toBe(true);
-    expect((weapon as any).changes["system.range.reach"]).toBe(10);
+    expect((weapon as any).changes["system.range.reach"]).toBe(30);
     expect(created).toHaveLength(1);
     expect(created[0].statuses).toContain("rage");
   });

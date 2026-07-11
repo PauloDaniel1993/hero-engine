@@ -5,7 +5,7 @@ import { resolveAttachment } from "../engine/state";
 import { skeldrStats } from "../plugins/thargunn/rules";
 
 const CONTENT_VERSION = 1;
-const TEMPLATE_VERSION = 2;
+const TEMPLATE_VERSION = 3;
 const DEFAULT_BASE_ID = "Owx9HA0KRtcB8xWe";
 const DEFAULT_ULTIMATE_ID = "VJ2nFvMjvYiHIO7w";
 const SOURCE_WEAPON_ID = "m2guptM3HxmWjIsH";
@@ -33,7 +33,13 @@ function metadata(key: string, source: unknown, extra: Partial<ManagedMetadata> 
   return { key, contentVersion: CONTENT_VERSION, templateVersion: TEMPLATE_VERSION, sourceHash: stableHash(source), ...extra };
 }
 
-export const ULTIMATE_WEAPON_REACH = 10;
+/**
+ * Ladrão da Décima Vida is a reach weapon (10 ft). At level 20,
+ * Demiurgic Colossus adds 10 ft while raging, and the Tenth Legend form adds
+ * another 10 ft. The managed Ultimate always carries Rage, so its projected
+ * melee reach is the fully stacked 30 ft.
+ */
+export const ULTIMATE_WEAPON_REACH = 30;
 
 /** dnd5e 5.x stores melee reach separately from ranged distance. */
 export function ultimateWeaponRangeUpdate(): Record<string, unknown> {
@@ -110,7 +116,7 @@ export async function previewThargunnInstall(options: { baseActorId?: string; ul
   if (!managedWeapon && !sourceWeapon) report.warnings.push("The recorded Nine Lives Stealer Halberd source item is missing; DDB repair cannot adopt it automatically.");
   else report.changes.push({ kind: "Item", key: "thargunn.item.weapon", action: managedWeapon ? "update" : "adopt", documentUuid: (managedWeapon ?? sourceWeapon)?.uuid, details: ["name/art/description", "three weapon-form activities", "preserve attunement and unrelated DDB fields"] });
   const ultimateWeapon = findItem(ultimate, "thargunn.item.weapon") ?? ultimate.items?.find((item: any) => item.name === "Nine Lives Stealer Halberd" || item.name === "Ladrão da Décima Vida");
-  if (ultimateWeapon) report.changes.push({ kind: "Item", key: "thargunn.item.weapon", action: findItem(ultimate, "thargunn.item.weapon") ? "update" : "adopt", documentUuid: ultimateWeapon.uuid, details: ["Ultimate copy", "10-foot melee reach", "same three managed weapon forms"] });
+  if (ultimateWeapon) report.changes.push({ kind: "Item", key: "thargunn.item.weapon", action: findItem(ultimate, "thargunn.item.weapon") ? "update" : "adopt", documentUuid: ultimateWeapon.uuid, details: ["Ultimate copy", "30-foot stacked melee reach", "same three managed weapon forms"] });
   for (const [key] of featureTemplates) report.changes.push({ kind: "Item", key, action: findItem(base, key) ? "update" : "create", details: ["managed feature", "stable workflow key"] });
   for (const [key] of macroTemplates) report.changes.push({ kind: "Macro", key, action: findMacro(key) ? "update" : "create", details: ["stable Hero Engine API command"] });
   if (!resolveAttachment(base, "thargunn-mythic")) report.changes.push({ kind: "Attachment", key: "thargunn-mythic", action: "create", documentUuid: base.uuid, details: ["fresh level-1 state", "5 charges", "3 empty Echo slots"] });
