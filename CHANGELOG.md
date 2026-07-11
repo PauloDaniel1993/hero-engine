@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.0.6 — 2026-07-11
+
+- Route player-triggered Ultimate transformations through the persistent GM
+  ruling queue; the actor swap now runs with GM authority only after approval.
+- Revalidate actor ownership, Rage, Skeldr, weapon attunement, long-rest
+  readiness, and active-form state when the GM confirms the ruling.
+- Leave Ultimate readiness, cooldown state, fractures, legendary points, and
+  Skeldr unchanged when the GM denies a request or the actor swap fails.
+- Apply Skeldr projections only after a successful transformation and delay the
+  "confirmed" ruling card until the GM-side hook has actually completed.
+- Add the public `ActionDef.announceUse` contract for deferred workflows and
+  make flag-gated actions visibly unavailable while awaiting resolution.
+
 ## 1.0.5 — 2026-07-11
 
 - Expose the stable canonical actor in the public mechanic context while

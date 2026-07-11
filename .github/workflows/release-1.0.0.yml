@@ -1,4 +1,4 @@
-name: Publish Hero Engine 1.0.5
+name: Publish Hero Engine 1.0.6
 
 on:
   push:
@@ -30,8 +30,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh release view v1.0.5 >/dev/null 2>&1; then
-            gh release upload v1.0.5 dist/module.json#module.json hero-engine.zip#hero-engine.zip --clobber
+          if gh release view v1.0.6 >/dev/null 2>&1; then
+            gh release upload v1.0.6 dist/module.json#module.json hero-engine.zip#hero-engine.zip --clobber
           else
-            gh release create v1.0.5 --target "$GITHUB_SHA" --title "Hero Engine 1.0.5 — Canonical Echo Repair" --notes-file CHANGELOG.md dist/module.json#module.json hero-engine.zip#hero-engine.zip
+            gh release create v1.0.6 --target "$GITHUB_SHA" --title "Hero Engine 1.0.6 — Player Ultimate Rulings" --notes-file CHANGELOG.md dist/module.json#module.json hero-engine.zip#hero-engine.zip
           fi

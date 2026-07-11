@@ -71,7 +71,7 @@ manifest. Update the minimum versions to the first versions actually tested:
       {
         "id": "hero-engine",
         "type": "module",
-        "compatibility": { "minimum": "1.0.5" }
+        "compatibility": { "minimum": "1.0.6" }
       }
     ],
     "systems": [
