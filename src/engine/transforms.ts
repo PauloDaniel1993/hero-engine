@@ -154,7 +154,7 @@ export async function endTransform(
     form: def ? localize(def.labelKey) : active.id,
   });
 
-  if (reason === "expired" && def?.onExpire) {
+  if (def?.onExpire && (reason === "expired" || def.onExpire.onManual === true)) {
     const after = def.onExpire;
     if (after.apply?.length) await ctx.applyOps(after.apply);
     if (after.chatKey) await ctx.postChat(after.chatKey);

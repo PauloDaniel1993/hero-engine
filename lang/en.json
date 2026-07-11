@@ -167,6 +167,7 @@
         "WeaponLevel": "Weapon level",
         "HungerTemporary": "Temporary Hunger",
         "HungerPermanent": "Permanent Hunger",
+        "HungerTotal": "Hunger / Legend's Weight",
         "EssenceDebt": "Essence Debt",
         "Legends": "Recorded Legends",
         "Fractures": "Name Fractures"
@@ -176,7 +177,14 @@
         "T3": "The weapon’s whisper",
         "T5": "Predatory demand",
         "T7": "Control save",
-        "T10": "True-name fracture"
+        "T10": "True-name fracture",
+        "PermanentRuling": "Make one Hunger from this mythic Echo permanent?",
+        "CruelDemand": "The weapon demands a cruel or predatory act.",
+        "ControlLoss": "Thar’gunn failed the control save and may lose one turn.",
+        "NameFragment": "The Nameless Sovereign attempts to take a fragment of Thar’gunn's true name.",
+        "WeightDemand": "Legend's Weight demands a self-imposed burden worthy of the power used.",
+        "WeightControl": "Thar’gunn must choose a costly legendary restraint for this turn.",
+        "MemoryDistortion": "Legend's Weight erases or distorts an important memory; the Sovereign cannot take control."
       },
       "Debt": { "T3": "The Sovereign speaks", "T5": "Soul replacement" },
       "Recharge": { "BloodQuestion": "Has the weapon tasted living blood since the previous dawn?", "BloodHit": "Living blood tasted" },
@@ -241,6 +249,9 @@
       },
       "Field": {
         "Action": "Field of the Tenth March",
+        "ExitAction": "Resolve an enemy leaving the Field",
+        "Rooted": "Claimed by the Tenth March",
+        "ExitFailed": "{target} fails the DC {dc} Strength save; its speed becomes 0 for the turn.",
         "Unavailable": "The Field needs at least one charge and cannot be used again before a long rest.",
         "Activated": "The Field consumes {charges} charges; a 165-foot march of stolen earth follows Thar’gunn.",
         "Expiry": "Field duration reconciliation"
@@ -253,6 +264,10 @@
         "AccessBody": "Choose Wisdom or Charisma to resist the Nameless Sovereign.",
         "ExpiryDamage": "Name Fracture settlement",
         "Ended": "The Tenth March ends and every stolen name demands its price.",
+        "SkeldrEnhancement": "Ultimate: 120-foot speed, ignores difficult terrain, and movement does not provoke opportunity attacks.",
+        "GmChoosesFirstEcho": "The GM must choose the first Hollow Echo of the Usurped March.",
+        "GmChoosesFirstEchoHint": "Choose which stored Echo the Nameless Sovereign forces Thar’gunn to manifest.",
+        "FirstTurnTakeover": "Natural 1: the Nameless Sovereign controls the first Ultimate turn.",
         "BlockSlot": "Choose an Echo slot to block from Name Fracture",
         "IdentityRuling": "Resolve the identity fragment lost at ten Name Fractures"
         ,"ThunderousStep": "Thunderous Step of Skeldr"

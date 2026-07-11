@@ -72,6 +72,8 @@ export async function previewThargunnInstall(options: { baseActorId?: string; ul
   const sourceWeapon = base.items?.get?.(SOURCE_WEAPON_ID) ?? base.items?.find((item: any) => item.name === "Nine Lives Stealer Halberd");
   if (!managedWeapon && !sourceWeapon) report.warnings.push("The recorded Nine Lives Stealer Halberd source item is missing; DDB repair cannot adopt it automatically.");
   else report.changes.push({ kind: "Item", key: "thargunn.item.weapon", action: managedWeapon ? "update" : "adopt", documentUuid: (managedWeapon ?? sourceWeapon)?.uuid, details: ["name/art/description", "three weapon-form activities", "preserve attunement and unrelated DDB fields"] });
+  const ultimateWeapon = findItem(ultimate, "thargunn.item.weapon") ?? ultimate.items?.find((item: any) => item.name === "Nine Lives Stealer Halberd" || item.name === "Ladrão da Décima Vida");
+  if (ultimateWeapon) report.changes.push({ kind: "Item", key: "thargunn.item.weapon", action: findItem(ultimate, "thargunn.item.weapon") ? "update" : "adopt", documentUuid: ultimateWeapon.uuid, details: ["Ultimate copy", "same three managed weapon forms"] });
   for (const [key] of featureTemplates) report.changes.push({ kind: "Item", key, action: findItem(base, key) ? "update" : "create", details: ["managed feature", "stable workflow key"] });
   for (const [key] of macroTemplates) report.changes.push({ kind: "Macro", key, action: findMacro(key) ? "update" : "create", details: ["stable Hero Engine API command"] });
   if (!resolveAttachment(base, "thargunn-mythic")) report.changes.push({ kind: "Attachment", key: "thargunn-mythic", action: "create", documentUuid: base.uuid, details: ["fresh level-1 state", "5 charges", "3 empty Echo slots"] });
@@ -98,7 +100,7 @@ function clonedActivities(source: any): Record<string, unknown> {
   return activities;
 }
 
-async function reconcileWeapon(base: any): Promise<any | null> {
+async function reconcileWeapon(base: any, ultimate = false): Promise<any | null> {
   const managed = findItem(base, "thargunn.item.weapon");
   const source = managed ?? base.items?.get?.(SOURCE_WEAPON_ID) ?? base.items?.find((item: any) => item.name === "Nine Lives Stealer Halberd");
   if (!source) return null;
@@ -108,6 +110,7 @@ async function reconcileWeapon(base: any): Promise<any | null> {
     img: "modules/hero-engine/assets/thargunn/tenth-life-thief.webp",
     "system.identifier": "ladrao-da-decima-vida",
     "system.description.value": description,
+    ...(ultimate ? { "system.range.value": 20, "system.range.units": "ft" } : {}),
     "system.activities": clonedActivities(source),
     [`flags.${MODULE_ID}.managed`]: metadata("thargunn.item.weapon", { description, activities: 3 }),
   });
@@ -182,12 +185,24 @@ async function reconcileSkeldr(base: any): Promise<any> {
 }
 
 async function reconcileUltimate(ultimate: any): Promise<void> {
+  const barbarian = ultimate.items?.find?.((item: any) => item.type === "class" && /barbar/i.test(item.name));
+  if (barbarian && Number(barbarian.system?.levels ?? 0) !== 20) await barbarian.update({ "system.levels": 20 });
   await ultimate.update({
     img: "modules/hero-engine/assets/thargunn/thargunn-ultimate-portrait.webp",
     "prototypeToken.width": 3, "prototypeToken.height": 3, "prototypeToken.texture.src": "modules/hero-engine/assets/thargunn/thargunn-ultimate-token.webp",
+    "system.traits.size": "huge",
     [`flags.${MODULE_ID}.managed`]: metadata("thargunn.actor.ultimate", { level: 20, size: "huge", chassis: "native-dnd5e" }),
     [`flags.${MODULE_ID}.chassis`]: { provider: "hero-engine-native", version: 1, provisionalStrike: true },
   });
+  const resistanceKey = "thargunn.effect.ultimate-resistances";
+  const resistance = ultimate.effects?.find?.((effect: any) => effect.getFlag?.(MODULE_ID, "managed")?.key === resistanceKey);
+  const resistanceSource = {
+    name: "Marcha Mítica — Forma da Décima Lenda", img: "modules/hero-engine/assets/thargunn/thargunn-ultimate-token.webp",
+    changes: ["acid", "bludgeoning", "cold", "fire", "lightning", "necrotic", "piercing", "poison", "slashing", "thunder"].map((damage) => ({ key: "system.traits.dr.value", mode: 2, value: damage, priority: 20 })),
+    flags: { [MODULE_ID]: { managed: metadata(resistanceKey, { except: ["psychic", "force", "radiant"], reachBonus: 10 }) } },
+  };
+  if (resistance) await resistance.update(resistanceSource);
+  else await ultimate.createEmbeddedDocuments?.("ActiveEffect", [resistanceSource]);
   const features = [
     ["thargunn.ultimate.legendary-points", "Pontos Lendários", "Three points refresh at the start of each Thar’gunn turn and expire at the next.", "mighty-impel"],
     ["thargunn.ultimate.thunderous-step", "Passo Trovejante de Skeldr", "After 20 feet of Skeldr movement, the next weapon hit gains 8d12 thunder and 8d12 force.", "skeldr-move"],
@@ -215,6 +230,7 @@ export async function installThargunn(options: { baseActorId?: string; ultimateA
   await setManaged(base, "thargunn.actor.base", { adopted: base.id });
   await reconcileUltimate(ultimate);
   const weapon = await reconcileWeapon(base);
+  await reconcileWeapon(ultimate, true);
   if (!weapon) throw new Error("hero-engine: managed weapon source missing");
   for (const feature of featureTemplates) await reconcileFeature(base, feature);
   const skeldr = await reconcileSkeldr(base);

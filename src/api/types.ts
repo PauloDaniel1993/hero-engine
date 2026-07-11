@@ -320,6 +320,8 @@ export interface TransformExpireDef {
   table?: string;
   chatKey?: string;
   runHook?: boolean;
+  /** Also settle the expiry outcome when the form is ended manually. */
+  onManual?: boolean;
 }
 
 /** A timed full-body form (Ultimates, Avatar states). */

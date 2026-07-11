@@ -8,6 +8,10 @@ const WEAPON_KEY = "thargunn.item.weapon";
 function actorOf(ctx: MechanicContext): any { return ctx.actor as any; }
 function managedKey(doc: any): string | undefined { return doc?.getFlag?.("hero-engine", MANAGED_FLAG)?.key ?? doc?.flags?.["hero-engine"]?.managed?.key; }
 function weapon(ctx: MechanicContext): any | null { return actorOf(ctx).items?.find((item: any) => managedKey(item) === WEAPON_KEY) ?? null; }
+async function skeldrOf(ctx: MechanicContext): Promise<any | null> {
+  const uuid = ctx.state.getFlag<string>("skeldrUuid");
+  return uuid ? await (globalThis as any).fromUuid?.(uuid) : game.actors?.find?.((actor: any) => managedKey(actor) === "thargunn.actor.skeldr") ?? null;
+}
 function actorLevel(actor: any): number { return Number(actor.system?.details?.level ?? actor.classes?.barbarian?.system?.levels ?? 0); }
 function echoIcon(category: string): string {
   const direct = ["action", "divine", "reaction", "sense", "spell", "trait"].includes(category) ? category
@@ -17,6 +21,15 @@ function echoIcon(category: string): string {
 }
 function isRaging(actor: any): boolean {
   return actor.statuses?.has?.("rage") || actor.effects?.some?.((effect: any) => effect.statuses?.has?.("rage") || /rage|fúria/i.test(effect.name));
+}
+
+async function adjustHunger(ctx: MechanicContext, amount: number): Promise<void> {
+  await ctx.state.adjust("hungerTemporary", amount);
+  await ctx.state.set("hungerTotal", ctx.state.get("hungerTemporary") + ctx.state.get("hungerPermanent"));
+}
+
+async function syncHunger(ctx: MechanicContext): Promise<void> {
+  await ctx.state.set("hungerTotal", ctx.state.get("hungerTemporary") + ctx.state.get("hungerPermanent"));
 }
 
 async function silentSave(actor: any, ability: string, dc: number): Promise<{ success: boolean; total: number; natural: number } | null> {
@@ -57,6 +70,18 @@ async function chooseFeature(features: EligibleFeature[]): Promise<EligibleFeatu
     rejectClose: false,
   });
   return features.find((feature) => feature.opaqueId === chosen) ?? null;
+}
+
+async function chooseEchoRecord(records: MechanicRecord[]): Promise<MechanicRecord | null> {
+  if (!records.length) return null;
+  const DialogV2 = (globalThis as any).foundry?.applications?.api?.DialogV2;
+  if (!DialogV2) return records[0]!;
+  const chosen = await DialogV2.wait({
+    window: { title: game.i18n.localize(`${P}.Ultimate.GmChoosesFirstEcho`) },
+    content: `<p>${game.i18n.localize(`${P}.Ultimate.GmChoosesFirstEchoHint`)}</p>`,
+    buttons: records.map((record, index) => ({ action: record.id, label: String(record.data["name"] ?? record.id), default: index === 0 })), rejectClose: false,
+  });
+  return records.find((record) => record.id === chosen) ?? null;
 }
 
 async function chooseCategory(): Promise<string | null> {
@@ -107,7 +132,7 @@ async function offerSiphon(ctx: MechanicContext, target: any, eventId: string, t
   const temporarySeconds = Number(ctx.config<number>("temporaryEchoSeconds") ?? 60);
   const record = await ctx.records.create(collectionId, {
     name: feature.label, category, tier, cost: echoCost(category, feature.spellLevel), soulDamage: soulDamageDice(tier),
-    description: feature.description, sourceOpaqueId: feature.opaqueId, sourceLabel: target.name,
+    description: feature.description, sourceOpaqueId: feature.opaqueId, sourceLabel: target.name, sourceActorUuid: target.uuid,
   }, {
     temporary,
     pendingWhenFull: !temporary,
@@ -115,8 +140,8 @@ async function offerSiphon(ctx: MechanicContext, target: any, eventId: string, t
     idempotencyKey: `siphon:${eventId}:${feature.opaqueId}`,
   });
   await createEchoItem(ctx, collectionId, record);
-  await ctx.state.adjust("hungerTemporary", 1);
-  if (ctx.state.transform()?.id === "tenth-march") await ctx.state.adjust("fractures", 1);
+  await adjustHunger(ctx, 1);
+  if (ctx.state.transform()?.id === "tenth-march" && ["legendary", "mythic"].includes(tier)) await ctx.state.adjust("fractures", 1);
   await ctx.postChat(`${P}.Siphon.Captured`, { echo: record.data.name, target: target.name });
   if (temporary) {
     await target.createEmbeddedDocuments?.("ActiveEffect", [{
@@ -165,10 +190,11 @@ async function useEcho(ctx: MechanicContext, collection: RecordCollectionDef, re
     await ctx.postChat(`${P}.Echo.Used`, { echo: record.data["name"] });
   }
   await ctx.state.adjust("charges", -cost);
-  await ctx.state.adjust("hungerTemporary", 1);
+  await adjustHunger(ctx, 1);
   const tier = String(record.data["tier"] ?? "minor");
   if (tier === "mythic") {
     await ctx.state.adjust("essenceDebt", 1);
+    await ctx.queueAdjudication("high-tier-permanent-hunger", String(record.data["name"] ?? record.id));
     await reconcilePenaltyEffects(ctx);
   }
   if (ctx.state.transform()?.id === "tenth-march") await ctx.state.adjust("fractures", 1);
@@ -206,10 +232,41 @@ async function resolveErasurePrice(ctx: MechanicContext, record: MechanicRecord)
   const tier = String(record.data["tier"] ?? "minor") as "minor" | "strong" | "legendary" | "mythic";
   const dc = erasureDc(tier);
   const save = await silentSave(actorOf(ctx), "wis", dc);
-  await ctx.state.adjust("hungerTemporary", 1);
+  await adjustHunger(ctx, 1);
   if (save?.success) return;
   const result = await ctx.rollTable("erasure-price");
   await ctx.postChat(`${P}.Echo.ErasureFailed`, { result: game.i18n.localize(result.textKey), dc });
+  const actor = actorOf(ctx);
+  if (result.roll === 1) {
+    const damage = await ctx.rollDice("6d10", `${P}.Echo.Erasure1`);
+    await actor.applyDamage?.(damage, { ignore: true });
+  } else if (result.roll === 2) {
+    await ctx.state.setFlag("lostHitDie", true);
+    await upsertNarrativeEffect(actor, "thargunn.effect.lost-hit-die", `${P}.Echo.Erasure2`);
+  } else if (result.roll === 3) {
+    await ctx.state.setFlag("deathSaveDisadvantage", true);
+    await upsertNarrativeEffect(actor, "thargunn.effect.death-save-disadvantage", `${P}.Echo.Erasure3`);
+  } else if (result.roll === 4) {
+    await ctx.queueAdjudication("erased-manifestation", String(record.data["name"] ?? record.id));
+  } else if (result.roll === 5) {
+    await ctx.state.setFlag("siphonLockedUntilPowerfulKill", true);
+    await upsertNarrativeEffect(actor, "thargunn.effect.siphon-lock", `${P}.Echo.Erasure5`);
+  } else if (result.roll === 6) {
+    await ctx.state.adjust("essenceDebt", 1);
+    await reconcilePenaltyEffects(ctx);
+  }
+}
+
+async function upsertNarrativeEffect(actor: any, key: string, labelKey: string): Promise<void> {
+  const existing = actor.effects?.find?.((effect: any) => effect.getFlag?.("hero-engine", "managed")?.key === key);
+  const source = { name: game.i18n.localize(labelKey), img: "modules/hero-engine/assets/thargunn/icons/echo-divine.webp", flags: { "hero-engine": { managed: { key, contentVersion: 1, templateVersion: 1, sourceHash: labelKey } } } };
+  if (existing) await existing.update(source);
+  else await actor.createEmbeddedDocuments?.("ActiveEffect", [source]);
+}
+
+async function removeManagedEffect(actor: any, key: string): Promise<void> {
+  const ids = actor.effects?.filter?.((effect: any) => effect.getFlag?.("hero-engine", "managed")?.key === key).map((effect: any) => effect.id) ?? [];
+  if (ids.length) await actor.deleteEmbeddedDocuments?.("ActiveEffect", ids);
 }
 
 async function eraseEcho(ctx: MechanicContext, collection: RecordCollectionDef, record: MechanicRecord): Promise<void> {
@@ -230,13 +287,23 @@ async function activateUltimate(ctx: MechanicContext): Promise<void> {
   let access: PromptResult | null = { promptId: "ultimate-access", success: true };
   if (!ctx.state.getFlag<boolean>("bondBroken")) access = await ctx.openPrompt("ultimate-access");
   const usurped = access?.success === false;
+  const usurpedNaturalOne = usurped && access?.natural === 1;
   await ctx.state.setFlag("ultimateUsurped", usurped);
+  await ctx.state.setFlag("usurpedFirstEchoPending", usurped);
+  await ctx.state.setFlag("ultimateTakeoverLocked", usurpedNaturalOne);
   await ctx.state.setFlag("ultimateTurns", 0);
   await ctx.state.setFlag("ultimateReady", false);
   await ctx.state.set("fractures", usurped ? 2 : 0);
   await ctx.state.set("legendaryPoints", 3);
   await ctx.state.setFlag("ultimateActive", true);
   await ctx.state.setFlag("skeldrMovement", 0);
+  const skeldr = await skeldrOf(ctx);
+  if (skeldr) {
+    await skeldr.update({ "system.attributes.movement.walk": 120 });
+    await upsertNarrativeEffect(skeldr, "thargunn.effect.ultimate-skeldr", `${P}.Ultimate.SkeldrEnhancement`);
+  }
+  if (usurped) await ctx.queueAdjudication("usurped-first-echo");
+  if (usurpedNaturalOne) await ctx.queueAdjudication("usurped-first-turn");
   await ctx.activateTransform("tenth-march");
 }
 
@@ -253,6 +320,13 @@ async function finishUltimate(ctx: MechanicContext): Promise<void> {
   await reconcilePenaltyEffects(ctx);
   await ctx.state.set("legendaryPoints", 0);
   await ctx.state.setFlag("ultimateActive", false);
+  await ctx.state.setFlag("ultimateTakeoverLocked", false);
+  await ctx.state.setFlag("usurpedFirstEchoPending", false);
+  const skeldr = await skeldrOf(ctx);
+  if (skeldr) {
+    await skeldr.update({ "system.attributes.movement.walk": 80 });
+    await removeManagedEffect(skeldr, "thargunn.effect.ultimate-skeldr");
+  }
 }
 
 async function runRite(ctx: MechanicContext): Promise<void> {
@@ -319,12 +393,16 @@ const hooks = {
       bondBroken: false, bloodSinceDawn: false, ultimateUsurped: false,
     };
     for (const [key, value] of Object.entries(defaults)) if (ctx.state.getFlag(key) === undefined) await ctx.state.setFlag(key, value);
+    await syncHunger(ctx);
   },
   async onTrigger(ctx: MechanicContext, trigger: TriggerDef, payload: TriggerPayload) {
     if (trigger.id === "long-rest") {
       await ctx.state.set("hungerTemporary", 0);
+      await syncHunger(ctx);
       await ctx.state.setFlag("ultimateReady", true);
       await ctx.state.setFlag("fieldLocked", false);
+      await ctx.state.setFlag("deathSaveDisadvantage", false);
+      await removeManagedEffect(actorOf(ctx), "thargunn.effect.death-save-disadvantage");
       return;
     }
     if (trigger.id === "short-rest") {
@@ -352,6 +430,7 @@ const hooks = {
     }
     if (trigger.id === "turn-end" && ctx.state.transform()?.id === "tenth-march") {
       await ctx.state.set("legendaryPoints", 0);
+      if (Number(ctx.state.getFlag<number>("ultimateTurns") ?? 0) === 1) await ctx.state.setFlag("ultimateTakeoverLocked", false);
       return;
     }
     if (trigger.id === "siphon-normal" || trigger.id === "siphon-kill") {
@@ -360,6 +439,16 @@ const hooks = {
       const targetUuid = String(payload.data?.["targetUuid"] ?? "");
       const targetDoc = targetUuid ? await (globalThis as any).fromUuid?.(targetUuid) : null;
       const target = targetDoc?.actor ?? targetDoc;
+      if (trigger.id === "siphon-kill" && target && ctx.state.transform()?.id === "tenth-march") {
+        const stolen = ["echoes", "temporary-echoes"].some((collectionId) => ctx.records.list(collectionId).slots.some((slot) => slot.record?.data["sourceActorUuid"] === target.uuid));
+        if (stolen) await ctx.state.adjust("fractures", 1);
+      }
+      if (ctx.state.getFlag<boolean>("siphonLockedUntilPowerfulKill")) {
+        const powerful = trigger.id === "siphon-kill" && target && (Number(target.system?.details?.cr ?? 0) >= Math.max(1, actorLevel(actorOf(ctx)) / 2) || Number(target.system?.resources?.legact?.max ?? target.system?.resources?.legres?.max ?? 0) > 0);
+        if (!powerful) return;
+        await ctx.state.setFlag("siphonLockedUntilPowerfulKill", false);
+        await removeManagedEffect(actorOf(ctx), "thargunn.effect.siphon-lock");
+      }
       if (target) await offerSiphon(ctx, target, String(payload.data?.["eventId"] ?? foundry.utils.randomID()));
       return;
     }
@@ -406,13 +495,22 @@ const hooks = {
       const charges = ctx.state.get("charges");
       if (charges < 1 || ctx.state.getFlag("fieldLocked")) throw new Error(game.i18n.localize(`${P}.Field.Unavailable`));
       await ctx.state.set("charges", 0);
-      await ctx.state.adjust("hungerTemporary", 1);
+      await adjustHunger(ctx, 1);
       if (ctx.state.transform()?.id === "tenth-march") await ctx.state.adjust("fractures", 1);
       await ctx.state.setFlag("fieldActive", true);
       await ctx.state.setFlag("fieldLocked", true);
       await ctx.state.setFlag("fieldExpires", Number(game.time?.worldTime ?? 0) + Number(ctx.config<number>("fieldSeconds") ?? 60));
       await createMarchField(ctx);
       await ctx.postChat(`${P}.Field.Activated`, { charges });
+    } else if (action.id === "field-exit-save") {
+      const target = [...(game.user?.targets ?? [])][0]?.actor;
+      if (!target) throw new Error(game.i18n.localize(`${P}.Errors.SelectTarget`));
+      const dc = Number(ctx.config<number>("siphonBaseDc") ?? 8) + Number(actorOf(ctx).system?.attributes?.prof ?? 0) + Number(actorOf(ctx).system?.abilities?.str?.mod ?? 0);
+      const save = await silentSave(target, "str", dc);
+      if (save && !save.success) {
+        await upsertNarrativeEffect(target, "thargunn.effect.field-root", `${P}.Field.Rooted`);
+        await ctx.postChat(`${P}.Field.ExitFailed`, { target: target.name, dc });
+      }
     } else if (action.id === "ultimate") await activateUltimate(ctx);
     else if (action.id === "skeldr-move") {
       const distance = Number(ctx.state.getFlag<number>("skeldrMovement") ?? 0) + 60;
@@ -426,9 +524,12 @@ const hooks = {
       const damage = await ctx.rollDice(String(ctx.config<string>("provisionalStrikeDamage") ?? "4d12 + 4d12"), `${P}.Ultimate.DevastatingDamage`);
       await target.applyDamage?.(damage);
     } else if (action.id === "legendary-echo") {
-      const record = ctx.records.list("echoes").slots.find((slot) => slot.record)?.record;
+      const records = ctx.records.list("echoes").slots.flatMap((slot) => slot.record ? [slot.record] : []);
+      if (ctx.state.getFlag<boolean>("usurpedFirstEchoPending") && !game.user?.isGM) throw new Error(game.i18n.localize(`${P}.Ultimate.GmChoosesFirstEcho`));
+      const record = game.user?.isGM ? await chooseEchoRecord(records) : records[0];
       if (!record) throw new Error(game.i18n.localize(`${P}.Echo.None`));
       await useEcho(ctx, thargunnMythic.recordCollections!.find((collection) => collection.id === "echoes")!, record);
+      await ctx.state.setFlag("usurpedFirstEchoPending", false);
     } else if (action.id === "second-siphon") {
       const target = [...(game.user?.targets ?? [])][0]?.actor;
       if (!target) throw new Error(game.i18n.localize(`${P}.Errors.SelectTarget`));
@@ -442,7 +543,7 @@ const hooks = {
     }
     else if (action.id === "skeldr-hunger-guard") {
       if (ctx.state.getFlag<boolean>("skeldrPresent") === false || ctx.state.getFlag<boolean>("skeldrHungerGuardUsed")) throw new Error(game.i18n.localize(`${P}.Skeldr.GuardUnavailable`));
-      await ctx.state.adjust("hungerTemporary", -1);
+      await adjustHunger(ctx, -1);
       await ctx.state.setFlag("skeldrHungerGuardUsed", true);
       await ctx.postChat(`${P}.Skeldr.Guarded`);
     } else if (action.id === "skeldr-early-return") {
@@ -454,15 +555,36 @@ const hooks = {
     else if (action.id === "purify") await ctx.queueAdjudication("purification");
   },
   async onRecordAction(ctx: MechanicContext, collection: RecordCollectionDef, record: MechanicRecord, action: RecordActionDef) {
-    if (action.id === "use") await useEcho(ctx, collection, record);
+    if (action.id === "use") {
+      if (ctx.state.getFlag<boolean>("usurpedFirstEchoPending") && !game.user?.isGM) throw new Error(game.i18n.localize(`${P}.Ultimate.GmChoosesFirstEcho`));
+      await useEcho(ctx, collection, record);
+      await ctx.state.setFlag("usurpedFirstEchoPending", false);
+    }
     if (action.id === "erase") await eraseEcho(ctx, collection, record);
   },
   async onRecordReplacement(ctx: MechanicContext, collection: RecordCollectionDef, _pending: MechanicRecord, erased: MechanicRecord) {
     if (collection.id === "echoes") await resolveErasurePrice(ctx, erased);
   },
+  async onThreshold(ctx: MechanicContext, tracker: any, threshold: any, direction: "up" | "down") {
+    if (tracker.id !== "hungerTotal") return;
+    const actor = actorOf(ctx);
+    if (threshold.at === 3) {
+      if (direction === "up") await upsertNarrativeEffect(actor, "thargunn.effect.hunger-wisdom", `${P}.Hunger.T3`);
+      else await removeManagedEffect(actor, "thargunn.effect.hunger-wisdom");
+      return;
+    }
+    if (direction === "down") return;
+    const broken = ctx.state.getFlag<boolean>("bondBroken") === true;
+    if (threshold.at === 5) await ctx.queueAdjudication(broken ? "legend-weight-demand" : "hunger-cruel-demand");
+    if (threshold.at === 7) {
+      const save = await silentSave(actor, "wis", 18);
+      if (!save?.success) await ctx.queueAdjudication(broken ? "legend-weight-control" : "hunger-control-loss");
+    }
+    if (threshold.at === 10) await ctx.queueAdjudication(broken ? "legend-memory-distortion" : "hunger-name-fragment");
+  },
   async onAdjudicated(ctx: MechanicContext, adjudication: any, resultId: string) {
     if (adjudication.id === "purification") {
-      if (resultId === "hunger") await ctx.state.set("hungerPermanent", 0);
+      if (resultId === "hunger") { await ctx.state.set("hungerPermanent", 0); await syncHunger(ctx); }
       if (resultId === "debt") await ctx.state.set("essenceDebt", 0);
       if (resultId === "skeldr") await ctx.state.setFlag("skeldrPresent", true);
       if (resultId === "fracture") await ctx.state.setFlag("fractureMaxHpPenalty", 0);
@@ -472,6 +594,12 @@ const hooks = {
       }
       await reconcilePenaltyEffects(ctx);
     }
+    if (adjudication.id === "high-tier-permanent-hunger" && resultId === "confirm") {
+      await ctx.state.adjust("hungerTemporary", -1);
+      await ctx.state.adjust("hungerPermanent", 1);
+      await syncHunger(ctx);
+    }
+    if (adjudication.id === "usurped-first-turn" && resultId === "confirm") await ctx.state.setFlag("ultimateTakeoverLocked", false);
     if (["fracture-block-slot", "rite-block-slot"].includes(adjudication.id) && resultId === "confirm") {
       const slot = ctx.records.list("echoes").slots.find((candidate) => !candidate.blocked);
       if (slot) await ctx.records.block("echoes", slot.id, adjudication.id);
@@ -488,8 +616,9 @@ export const thargunnMythic: MechanicPlugin = {
   nameKey: `${P}.Name`, descriptionKey: `${P}.Description`,
   trackers: [
     { id: "weaponLevel", labelKey: `${P}.Trackers.WeaponLevel`, min: 1, max: 5, initial: 1 },
-    { id: "hungerTemporary", labelKey: `${P}.Trackers.HungerTemporary`, min: 0, max: 10, initial: 0, thresholds: [3,5,7,10].map((at) => ({ at, labelKey: `${P}.Hunger.T${at}` })) },
+    { id: "hungerTemporary", labelKey: `${P}.Trackers.HungerTemporary`, min: 0, max: 10, initial: 0 },
     { id: "hungerPermanent", labelKey: `${P}.Trackers.HungerPermanent`, min: 0, max: 10, initial: 0 },
+    { id: "hungerTotal", labelKey: `${P}.Trackers.HungerTotal`, min: 0, max: 20, initial: 0, thresholds: [3,5,7,10].map((at) => ({ at, labelKey: `${P}.Hunger.T${at}` })) },
     { id: "essenceDebt", labelKey: `${P}.Trackers.EssenceDebt`, min: 0, max: 5, initial: 0, thresholds: [{ at: 3, labelKey: `${P}.Debt.T3` }, { at: 5, labelKey: `${P}.Debt.T5` }] },
     { id: "legends", labelKey: `${P}.Trackers.Legends`, min: 0, max: 10, initial: 0 },
     { id: "fractures", labelKey: `${P}.Trackers.Fractures`, min: 0, max: 10, initial: 0 },
@@ -505,6 +634,7 @@ export const thargunnMythic: MechanicPlugin = {
         { key: "tier", type: "choice", labelKey: `${P}.Echo.Tier`, choices: ["minor","strong","legendary","mythic"], required: true }, { key: "cost", type: "number", labelKey: `${P}.Echo.Cost`, min: 1, required: true },
         { key: "soulDamage", type: "string", labelKey: `${P}.Echo.SoulDamage`, required: true }, { key: "description", type: "string", labelKey: `${P}.Echo.Description` },
         { key: "sourceOpaqueId", type: "string", labelKey: `${P}.Echo.Source` }, { key: "sourceLabel", type: "string", labelKey: `${P}.Echo.Source` },
+        { key: "sourceActorUuid", type: "string", labelKey: `${P}.Echo.Source` },
       ], actions: [{ id: "use", labelKey: `${P}.Echo.Use`, ownerOnly: true }, { id: "erase", labelKey: `${P}.Echo.Erase`, ownerOnly: true, destructive: true }] },
     { id: "temporary-echoes", labelKey: `${P}.Echo.Temporary`, descriptionKey: `${P}.Echo.TemporaryHint`, schemaVersion: 1, capacity: 10, visibility: "owner", lifecycle: { type: "world-time", duration: 60 },
       fields: [
@@ -512,6 +642,7 @@ export const thargunnMythic: MechanicPlugin = {
         { key: "tier", type: "choice", labelKey: `${P}.Echo.Tier`, choices: ["minor","strong","legendary","mythic"], required: true }, { key: "cost", type: "number", labelKey: `${P}.Echo.Cost`, min: 1, required: true },
         { key: "soulDamage", type: "string", labelKey: `${P}.Echo.SoulDamage`, required: true }, { key: "description", type: "string", labelKey: `${P}.Echo.Description` },
         { key: "sourceOpaqueId", type: "string", labelKey: `${P}.Echo.Source` }, { key: "sourceLabel", type: "string", labelKey: `${P}.Echo.Source` },
+        { key: "sourceActorUuid", type: "string", labelKey: `${P}.Echo.Source` },
       ], actions: [{ id: "use", labelKey: `${P}.Echo.Use`, ownerOnly: true }] },
     { id: "recorded-legends", labelKey: `${P}.Legends.Collection`, schemaVersion: 1, capacity: 10, visibility: "gm", lifecycle: { type: "permanent" },
       fields: [{ key: "name", type: "string", labelKey: `${P}.Legends.Name`, required: true }, { key: "description", type: "string", labelKey: `${P}.Legends.Description` }], actions: [] },
@@ -532,26 +663,37 @@ export const thargunnMythic: MechanicPlugin = {
   actions: [
     { id: "siphon-manual", labelKey: `${P}.Siphon.Action`, runHook: true },
     { id: "field", labelKey: `${P}.Field.Action`, runHook: true, cooldown: { type: "longRest" } },
+    { id: "field-exit-save", labelKey: `${P}.Field.ExitAction`, requiresFlag: "fieldActive", runHook: true },
     { id: "ultimate", labelKey: `${P}.Ultimate.Action`, runHook: true, cooldown: { type: "longRest" } },
     { id: "rite", labelKey: `${P}.Rite.Action`, gmOnly: true, runHook: true },
     { id: "purify", labelKey: `${P}.Purification.Action`, gmOnly: true, runHook: true },
-    { id: "skeldr-move", labelKey: `${P}.Ultimate.SkeldrMove`, costs: [{ resource: "legendaryPoints", amount: 1 }], requiresFlag: "ultimateActive", runHook: true },
-    { id: "mighty-impel", labelKey: `${P}.Ultimate.MightyImpelAction`, costs: [{ resource: "legendaryPoints", amount: 1 }], requiresFlag: "ultimateActive", runHook: true },
-    { id: "devastating-strike", labelKey: `${P}.Ultimate.DevastatingStrike`, costs: [{ resource: "legendaryPoints", amount: 2 }], requiresFlag: "ultimateActive", runHook: true },
-    { id: "legendary-echo", labelKey: `${P}.Ultimate.LegendaryEcho`, costs: [{ resource: "legendaryPoints", amount: 2 }], requiresFlag: "ultimateActive", runHook: true },
-    { id: "second-siphon", labelKey: `${P}.Ultimate.SecondSiphon`, costs: [{ resource: "legendaryPoints", amount: 3 }], requiresFlag: "ultimateActive", runHook: true },
-    { id: "skeldr-rescue", labelKey: `${P}.Ultimate.SkeldrRescue`, costs: [{ resource: "legendaryPoints", amount: 3 }], requiresFlag: "ultimateActive", runHook: true },
+    { id: "skeldr-move", labelKey: `${P}.Ultimate.SkeldrMove`, costs: [{ resource: "legendaryPoints", amount: 1 }], requiresFlag: "ultimateActive", forbidsFlag: "ultimateTakeoverLocked", runHook: true },
+    { id: "mighty-impel", labelKey: `${P}.Ultimate.MightyImpelAction`, costs: [{ resource: "legendaryPoints", amount: 1 }], requiresFlag: "ultimateActive", forbidsFlag: "ultimateTakeoverLocked", runHook: true },
+    { id: "devastating-strike", labelKey: `${P}.Ultimate.DevastatingStrike`, costs: [{ resource: "legendaryPoints", amount: 2 }], requiresFlag: "ultimateActive", forbidsFlag: "ultimateTakeoverLocked", runHook: true },
+    { id: "legendary-echo", labelKey: `${P}.Ultimate.LegendaryEcho`, costs: [{ resource: "legendaryPoints", amount: 2 }], requiresFlag: "ultimateActive", forbidsFlag: "ultimateTakeoverLocked", runHook: true },
+    { id: "second-siphon", labelKey: `${P}.Ultimate.SecondSiphon`, costs: [{ resource: "legendaryPoints", amount: 3 }], requiresFlag: "ultimateActive", forbidsFlag: "ultimateTakeoverLocked", runHook: true },
+    { id: "skeldr-rescue", labelKey: `${P}.Ultimate.SkeldrRescue`, costs: [{ resource: "legendaryPoints", amount: 3 }], requiresFlag: "ultimateActive", forbidsFlag: "ultimateTakeoverLocked", runHook: true },
     { id: "skeldr-hunger-guard", labelKey: `${P}.Skeldr.GuardAction`, runHook: true },
     { id: "skeldr-early-return", labelKey: `${P}.Skeldr.EarlyReturn`, gmOnly: true, runHook: true },
     { id: "record-legend", labelKey: `${P}.Legends.Add`, gmOnly: true, runHook: true },
   ],
   transformations: [{ id: "tenth-march", labelKey: `${P}.Ultimate.Name`, strategy: "actor-swap", durationRounds: "@cfg.ultimateRounds",
-    swap: { formActorName: "Thar’gunn - Ultimate", hpCarry: "keep-percent" }, onExpire: { runHook: true, chatKey: `${P}.Ultimate.Ended` } }],
+    swap: { formActorName: "Thar’gunn - Ultimate", hpCarry: "keep-percent" }, onExpire: { runHook: true, chatKey: `${P}.Ultimate.Ended`, onManual: true } }],
   tables: [{ id: "erasure-price", labelKey: `${P}.Echo.ErasureTable`, die: "1d6", entries: [1,2,3,4,5,6].map((roll) => ({ min: roll, max: roll, textKey: `${P}.Echo.Erasure${roll}` })) }],
   adjudications: [
     { id: "secure-siphon", titleKey: `${P}.Siphon.GmTitle`, descriptionKey: `${P}.Siphon.GmHint`, kind: "confirm" },
+    { id: "high-tier-permanent-hunger", titleKey: `${P}.Hunger.PermanentRuling`, kind: "confirm" },
+    { id: "hunger-cruel-demand", titleKey: `${P}.Hunger.CruelDemand`, kind: "confirm" },
+    { id: "hunger-control-loss", titleKey: `${P}.Hunger.ControlLoss`, kind: "confirm" },
+    { id: "hunger-name-fragment", titleKey: `${P}.Hunger.NameFragment`, kind: "confirm" },
+    { id: "legend-weight-demand", titleKey: `${P}.Hunger.WeightDemand`, kind: "confirm" },
+    { id: "legend-weight-control", titleKey: `${P}.Hunger.WeightControl`, kind: "confirm" },
+    { id: "legend-memory-distortion", titleKey: `${P}.Hunger.MemoryDistortion`, kind: "confirm" },
     { id: "fracture-block-slot", titleKey: `${P}.Ultimate.BlockSlot`, kind: "confirm" }, { id: "fracture-identity", titleKey: `${P}.Ultimate.IdentityRuling`, kind: "confirm" },
     { id: "rite-block-slot", titleKey: `${P}.Rite.BlockSlot`, kind: "confirm" }, { id: "rite-name-escalation", titleKey: `${P}.Rite.NameEscalation`, kind: "confirm" },
+    { id: "erased-manifestation", titleKey: `${P}.Echo.Erasure4`, kind: "confirm" },
+    { id: "usurped-first-echo", titleKey: `${P}.Ultimate.GmChoosesFirstEcho`, kind: "confirm" },
+    { id: "usurped-first-turn", titleKey: `${P}.Ultimate.FirstTurnTakeover`, kind: "confirm" },
     { id: "purification", titleKey: `${P}.Purification.Title`, descriptionKey: `${P}.Purification.Hint`, kind: "choice", choices: ["hunger","debt","slot","skeldr","fracture"].map((id) => ({ id, labelKey: `${P}.Purification.${id}` })) },
   ],
   configSchema: [

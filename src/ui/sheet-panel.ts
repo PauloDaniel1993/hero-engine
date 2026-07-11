@@ -187,7 +187,11 @@ function renderMechanic(att: Attachment, plugin: MechanicPlugin, state: Instance
       const overflow = index >= snapshot.slots.length;
       const status = slot.blocked ? "blocked" : slot.record ? (slot.record.temporary ? "temporary" : "permanent") : "empty";
       const title = slot.record ? String(slot.record.data["name"] ?? slot.record.data["label"] ?? slot.record.id) : localize("HEROENGINE.Records.Empty");
-      const details = slot.record ? Object.entries(slot.record.data).filter(([key]) => key !== "name" && key !== "label").map(([key, value]) => `<span><b>${escapeHtml(key)}</b>${escapeHtml(typeof value === "string" ? value : JSON.stringify(value))}</span>`).join("") : "";
+      const details = slot.record ? Object.entries(slot.record.data).filter(([key]) => !["name", "label", "sourceOpaqueId", "sourceActorUuid"].includes(key)).map(([key, value]) => {
+        const field = collection.fields.find((candidate) => candidate.key === key);
+        const label = field ? localize(field.labelKey) : key;
+        return `<span><b>${escapeHtml(label)}</b>${escapeHtml(typeof value === "string" ? value : JSON.stringify(value))}</span>`;
+      }).join("") : "";
       const actions = slot.record ? (collection.actions ?? []).filter((action) => !action.gmOnly || game.user.isGM).map((action) => `<button type="button" data-he="record-action" data-plugin="${plugin.id}" data-collection="${collection.id}" data-record="${slot.record!.id}" data-action="${action.id}">${escapeHtml(localize(action.labelKey))}</button>`).join("") : "";
       return `<article class="he-record-slot is-${status}${overflow ? " is-overflow" : ""}" data-he-record data-status="${status}" data-search="${escapeHtml(`${title} ${JSON.stringify(slot.record?.data ?? {})}`.toLocaleLowerCase())}">
         <header><span class="he-record-index">${index + 1}</span><strong>${escapeHtml(title)}</strong>

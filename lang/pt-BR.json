@@ -167,6 +167,7 @@
         "WeaponLevel": "Nível da arma",
         "HungerTemporary": "Fome temporária",
         "HungerPermanent": "Fome permanente",
+        "HungerTotal": "Fome / Peso da Lenda",
         "EssenceDebt": "Dívida de Essência",
         "Legends": "Lendas Gravadas",
         "Fractures": "Fraturas de Nome"
@@ -176,7 +177,14 @@
         "T3": "O sussurro da arma",
         "T5": "Exigência predatória",
         "T7": "Teste de controle",
-        "T10": "Fratura do nome verdadeiro"
+        "T10": "Fratura do nome verdadeiro",
+        "PermanentRuling": "Tornar permanente uma Marca de Fome deste Eco mítico?",
+        "CruelDemand": "A arma exige um ato cruel ou predatório.",
+        "ControlLoss": "Thar’gunn falhou no teste de controle e pode perder um turno.",
+        "NameFragment": "O Soberano Sem Nome tenta tomar um fragmento do nome verdadeiro de Thar’gunn.",
+        "WeightDemand": "O Peso da Lenda exige um fardo autoimposto digno do poder usado.",
+        "WeightControl": "Thar’gunn deve escolher uma restrição lendária custosa neste turno.",
+        "MemoryDistortion": "O Peso da Lenda apaga ou distorce uma memória importante; o Soberano não pode assumir o controle."
       },
       "Debt": { "T3": "O Soberano fala", "T5": "Substituição da alma" },
       "Recharge": { "BloodQuestion": "A arma provou sangue vivo desde o amanhecer anterior?", "BloodHit": "Sangue vivo provado" },
@@ -241,6 +249,9 @@
       },
       "Field": {
         "Action": "Campo da Décima Marcha",
+        "ExitAction": "Resolver inimigo saindo do Campo",
+        "Rooted": "Reivindicado pela Décima Marcha",
+        "ExitFailed": "{target} falha na resistência de Força CD {dc}; seu deslocamento se torna 0 neste turno.",
         "Unavailable": "O Campo exige ao menos uma carga e só retorna após descanso longo.",
         "Activated": "O Campo consome {charges} cargas; uma marcha de 165 pés de terra roubada segue Thar’gunn.",
         "Expiry": "Reconciliação da duração do Campo"
@@ -253,6 +264,10 @@
         "AccessBody": "Escolha Sabedoria ou Carisma para resistir ao Soberano Sem Nome.",
         "ExpiryDamage": "Acerto de contas das Fraturas de Nome",
         "Ended": "A Décima Marcha termina e cada nome roubado exige seu preço.",
+        "SkeldrEnhancement": "Ultimate: deslocamento de 120 pés, ignora terreno difícil e não provoca ataques de oportunidade.",
+        "GmChoosesFirstEcho": "O Mestre deve escolher o primeiro Eco Oco da Marcha Usurpada.",
+        "GmChoosesFirstEchoHint": "Escolha qual Eco armazenado o Soberano Sem Nome força Thar’gunn a manifestar.",
+        "FirstTurnTakeover": "1 natural: o Soberano Sem Nome controla o primeiro turno da Ultimate.",
         "BlockSlot": "Escolha um espaço de Eco para bloquear por Fratura de Nome",
         "IdentityRuling": "Resolva o fragmento de identidade perdido em dez Fraturas"
         ,"ThunderousStep": "Passo Trovejante de Skeldr"
