@@ -410,26 +410,30 @@ export async function executeAction(att: Attachment, actionId: string): Promise<
   }
 
   // Pay costs and apply declarative ops.
+  const rollbackState = structuredClone(state);
   const payOps: StateOp[] = costs.map((c) => ({ op: "adjust", target: c.resource, amount: -c.amount }));
   await applyOpsTo(att, plugin, [...payOps, ...(action.apply ?? [])], `action:${action.id}`);
-
-  if (action.roll) {
-    const s2 = readState(att.stateDoc, plugin.id)!;
-    await rollDice(att.actor, resolveDiceFormula(action.roll.formula, att, plugin, s2), buildEvalData(att, plugin, s2), action.roll.flavorKey);
-  }
-  if (action.transform) {
-    const ctx = makeContext(att);
-    if (ctx) await activateTransform(ctx, plugin, action.transform, att);
-  }
-  if (action.adjudicate) await enqueueAdjudication(att, action.adjudicate);
-  if (action.table) await rollConsequenceTable(att, plugin, action.table);
-
-  await markCooldown(att, plugin, action);
-  await postChat(att.actor, "HEROENGINE.Chat.ActionUsed", { action: localize(action.labelKey) });
-
-  if (action.runHook) {
-    const ctx = makeContext(att);
-    if (ctx) await plugin.hooks?.onActionUse?.(ctx, action, promptResult);
+  try {
+    if (action.roll) {
+      const s2 = readState(att.stateDoc, plugin.id)!;
+      await rollDice(att.actor, resolveDiceFormula(action.roll.formula, att, plugin, s2), buildEvalData(att, plugin, s2), action.roll.flavorKey);
+    }
+    if (action.transform) {
+      const ctx = makeContext(att);
+      if (ctx) await activateTransform(ctx, plugin, action.transform, att);
+    }
+    if (action.adjudicate) await enqueueAdjudication(att, action.adjudicate);
+    if (action.table) await rollConsequenceTable(att, plugin, action.table);
+    if (action.runHook) {
+      const ctx = makeContext(att);
+      if (ctx) await plugin.hooks?.onActionUse?.(ctx, action, promptResult);
+    }
+    await markCooldown(att, plugin, action);
+    await postChat(att.actor, "HEROENGINE.Chat.ActionUsed", { action: localize(action.labelKey) });
+  } catch (error) {
+    appendAudit(rollbackState, `action ${action.id} rolled back after failure`);
+    await writeState(att.stateDoc, plugin.id, rollbackState);
+    throw error;
   }
 }
 
