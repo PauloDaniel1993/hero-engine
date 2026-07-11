@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.5 — 2026-07-11
+
+- Expose the stable canonical actor in the public mechanic context while
+  retaining the current actor-swap form as the runtime actor.
+- Create, find, and automatically repair Hollow Echo Items and dnd5e Activities
+  on base Thar’gunn, including records captured while Ultimate is active.
+- Remove misplaced or orphaned Ultimate-form projections and clean linked Items
+  from both actors when a record is consumed, erased, or expires.
+- Reconcile projections idempotently after record migrations and lifecycle
+  cleanup so existing `REPAIR NEEDED` records recover when Mechanics opens.
+
 ## 1.0.4 — 2026-07-11
 
 - Emit a mechanic-settled event after every action and record action finishes,

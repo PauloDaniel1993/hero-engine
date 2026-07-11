@@ -2,7 +2,7 @@
   "id": "hero-engine",
   "title": "Hero Engine",
   "description": "A plugin engine for bespoke epic character and weapon mechanics: trackers, charges, triggers, stances, transformations, curses and GM-adjudicated rituals — fully configurable, driven by a typed plugin API.",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "authors": [{ "name": "pdc", "email": "pdc187@gmail.com" }],
   "compatibility": {
     "minimum": "13",

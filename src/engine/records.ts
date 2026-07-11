@@ -129,6 +129,7 @@ export async function ensureAttachmentReady(att: Attachment, plugin: MechanicPlu
     }
   });
   await reconcileRecordLifecycles(att, plugin, getContext);
+  await plugin.hooks?.onRecordsReady?.(getContext());
 }
 
 function lifecycleExpired(record: MechanicRecord, transformActivationId?: string): boolean {
@@ -154,11 +155,16 @@ async function removeSuppression(recordId: string): Promise<void> {
   }
 }
 
+export function recordProjectionActors(att: Attachment): any[] {
+  return [...new Set([att.canonicalActor, att.actor].filter(Boolean))];
+}
+
 async function removeLinkedRecordItems(att: Attachment, recordId: string): Promise<void> {
-  const actor = att.canonicalActor as any;
-  const ids = actor.items?.filter?.((item: any) => item.getFlag?.("hero-engine", "managed")?.recordId === recordId).map((item: any) => item.id) ?? [];
-  if (ids.length && (game.user?.isGM || actor.testUserPermission?.(game.user, "OWNER"))) {
-    await actor.deleteEmbeddedDocuments?.("Item", ids);
+  for (const actor of recordProjectionActors(att)) {
+    const ids = actor.items?.filter?.((item: any) => item.getFlag?.("hero-engine", "managed")?.recordId === recordId).map((item: any) => item.id) ?? [];
+    if (ids.length && (game.user?.isGM || actor.testUserPermission?.(game.user, "OWNER"))) {
+      await actor.deleteEmbeddedDocuments?.("Item", ids);
+    }
   }
 }
 

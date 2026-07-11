@@ -103,10 +103,12 @@ module setting (default 06:00).
 ## Hooks (the escape hatch)
 
 `onAttach/onDetach`, `onTrigger`, `onActionUse`, `onPromptResolved`,
-`onThreshold`, `onTransformExpire`, `onAdjudicated`, `onRecharge`. Each
-receives a `MechanicContext`:
+`onThreshold`, `onTransformExpire`, `onAdjudicated`, `onRecharge`, and
+`onRecordsReady`. Each receives a `MechanicContext`:
 
 ```ts
+ctx.actor                         // current runtime actor (possibly a swapped form)
+ctx.canonicalActor                // stable actor for state-owned document projections
 ctx.config(key)                 // resolved config value
 ctx.state.get/set/adjust        // clamped tracker/resource access
 ctx.state.getFlag/setFlag       // named state flags
@@ -124,6 +126,11 @@ ctx.postChat(key, data) / ctx.postCard({ titleKey, buttons })
 ctx.applyOps([...])             // declarative StateOps
 ctx.fireTrigger(triggerId)      // replay a trigger (same path as automation)
 ```
+
+`onRecordsReady` runs after record migration and lifecycle cleanup. Use it for
+idempotent repair of Items or Activities projected from authoritative records.
+Persistent projections belong on `ctx.canonicalActor`; combat effects and
+damage that follow a transformed token normally use `ctx.actor`.
 
 Plugins may import **only** from the public API entry (`hero-engine/src/api`
 for built-ins; external plugins just use the global API object + the published

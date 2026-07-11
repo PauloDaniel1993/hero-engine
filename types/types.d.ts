@@ -411,7 +411,10 @@ export interface StateAccessor {
  * All engine services flow through this — plugins never touch engine internals.
  */
 export interface MechanicContext {
+    /** Actor currently executing the mechanic; may be a temporary dnd5e actor-swap form. */
     actor: ActorDoc;
+    /** Stable actor that owns character state and persistent document projections. */
+    canonicalActor: ActorDoc;
     /** Bound item for `item` archetype mechanics. */
     item?: ItemDoc;
     pluginId: string;
@@ -466,6 +469,8 @@ export interface PluginRuntimeHooks {
     onRecharge?(ctx: MechanicContext, resource: ResourceDef, rule: RechargeRule, applied: number): void | Promise<void>;
     onRecordAction?(ctx: MechanicContext, collection: RecordCollectionDef, record: MechanicRecord, action: RecordActionDef): void | Promise<void>;
     onRecordReplacement?(ctx: MechanicContext, collection: RecordCollectionDef, pending: MechanicRecord, erased: MechanicRecord): void | Promise<void>;
+    /** Idempotently reconcile Items, Activities, or other projections after stored records are ready. */
+    onRecordsReady?(ctx: MechanicContext): void | Promise<void>;
     migrateRecord?(collectionId: string, record: MechanicRecord, fromVersion: number, toVersion: number): MechanicRecord;
     onSecureTargetRequest?(ctx: MechanicContext, request: SecureTargetRequest, target: ActorDoc, trustedUserId: string): void | Promise<void>;
 }

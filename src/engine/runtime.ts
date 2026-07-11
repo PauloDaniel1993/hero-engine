@@ -209,6 +209,7 @@ export function makeContext(att: Attachment): MechanicContext | null {
   let ctx!: MechanicContext;
   ctx = {
     actor: att.actor,
+    canonicalActor: att.canonicalActor,
     item: att.item,
     pluginId: att.pluginId,
     config<T>(key: string): T {

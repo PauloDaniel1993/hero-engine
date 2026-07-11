@@ -71,7 +71,7 @@ manifest. Update the minimum versions to the first versions actually tested:
       {
         "id": "hero-engine",
         "type": "module",
-        "compatibility": { "minimum": "1.0.4" }
+        "compatibility": { "minimum": "1.0.5" }
       }
     ],
     "systems": [
@@ -251,6 +251,11 @@ Transformation and actor-swap workflows MUST preserve:
 
 Do not copy the whole mechanic flag tree between actors. Use the engine's
 attachment and transformation APIs so cleanup and expiry continue to work.
+Within a plugin, `ctx.actor` is the current runtime form and
+`ctx.canonicalActor` is the stable owner. Persistent Items and Activities
+projected from records MUST be created and resolved through
+`ctx.canonicalActor`; damage, token effects, and form-local combat behavior
+normally use `ctx.actor`.
 
 Presentation state is client-local. Collapsed sections, search text, filters,
 and scroll positions MUST NOT be written to the world or actor.
@@ -287,6 +292,11 @@ create, replace, cancel, block, unblock, expire, and action operations.
 Linked projected Items SHOULD carry the canonical `recordId`. If a projected
 Item is missing, the add-on SHOULD offer a deterministic repair from record
 data rather than treating the projection as authoritative.
+
+Use `onRecordsReady` for idempotent projection repair after schema migration
+and lifecycle cleanup. The hook may run repeatedly and MUST produce no
+duplicates. It should also remove safe-to-delete projections left on a runtime
+actor by an older actor-swap implementation.
 
 ## 7. Reactive window contract
 

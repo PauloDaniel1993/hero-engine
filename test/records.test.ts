@@ -29,7 +29,7 @@ function fixture(capacity = 2) {
   let formulaCapacity = capacity;
   let ctx!: MechanicContext;
   ctx = {
-    actor, pluginId: plugin.id,
+    actor, canonicalActor: actor, pluginId: plugin.id,
     config: () => undefined as never,
     state: {} as any,
     records: {} as any,
@@ -125,5 +125,30 @@ describe("record collections", () => {
     const snapshot = failed.ctx.records.list("echoes");
     expect(snapshot.recovery).toMatch(/migration-failed/);
     expect(snapshot.slots[0]?.record?.data.name).toBe("Untouched");
+  });
+
+  it("runs idempotent projection reconciliation after records are ready", async () => {
+    const { att, plugin, ctx } = fixture(1);
+    let reconciled = 0;
+    plugin.hooks = { onRecordsReady: async (received) => { expect(received).toBe(ctx); reconciled += 1; } };
+    await ensureAttachmentReady(att, plugin, () => ctx);
+    expect(reconciled).toBe(1);
+  });
+
+  it("removes linked record Items from canonical and actor-swap projections", async () => {
+    const { att, ctx } = fixture(1);
+    const record = await ctx.records.create("echoes", { name: "Breath", tier: 1, category: "action" });
+    const item = (id: string) => ({ id, getFlag: (_scope: string, key: string) => key === "managed" ? { recordId: record.id } : undefined });
+    const deleted: string[] = [];
+    const actor = (id: string) => ({
+      id, items: [item(`${id}-item`)], testUserPermission: () => true,
+      deleteEmbeddedDocuments: async (_type: string, ids: string[]) => { deleted.push(...ids); },
+    });
+    att.canonicalActor = actor("base");
+    att.actor = actor("ultimate");
+
+    await ctx.records.remove("echoes", record.id);
+    expect(deleted).toEqual(["base-item", "ultimate-item"]);
+    expect(ctx.records.get("echoes", record.id)).toBeNull();
   });
 });
