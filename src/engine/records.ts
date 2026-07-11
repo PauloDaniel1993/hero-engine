@@ -300,6 +300,11 @@ export function makeRecordAccessor(att: Attachment, plugin: MechanicPlugin, getC
     async expire(collectionId, recordId) { await this.remove(collectionId, recordId, `expire:${collectionId}:${recordId}`); },
     async replacePending(collectionId, pendingId, eraseRecordId) {
       const def = collectionDef(plugin, collectionId);
+      const before = this.list(collectionId);
+      const pendingRecord = before.pending.find((entry) => entry.id === pendingId)?.record;
+      const erasedRecord = this.get(collectionId, eraseRecordId);
+      if (!pendingRecord || !erasedRecord) throw new Error("hero-engine: pending replacement is no longer valid");
+      if (plugin.hooks?.onRecordReplacement) await plugin.hooks.onRecordReplacement(getContext(), def, pendingRecord, erasedRecord);
       let erasedRecordId: string | undefined;
       const result = await mutateState(att.stateDoc, plugin.id, (state) => {
         requireWritable(att, def, state);

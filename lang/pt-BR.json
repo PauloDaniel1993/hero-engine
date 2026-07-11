@@ -5,6 +5,10 @@
         "Name": "Hora do amanhecer",
         "Hint": "Hora do tempo de jogo (0-23) em que recargas 'ao amanhecer' acontecem. Padrão 6."
       },
+      "BackupEvidence": {
+        "Name": "Evidência de backup verificado",
+        "Hint": "Obrigatório antes da instalação gerenciada de atores: informe um caminho de backup, ID de snapshot ou registro de checksum."
+      },
       "Theme": {
         "Name": "Tema do Hero Engine",
         "Hint": "Tema visual padrão do mundo; cada cliente pode substituir localmente.",
@@ -151,6 +155,10 @@
       "Blocked": "Bloqueado",
       "Empty": "Espaço vazio",
       "Overflow": "Excedente"
+      ,"Pending": "Captura pendente"
+      ,"PendingHint": "Todos os espaços utilizáveis estão cheios. Escolha o Eco a apagar ou cancele esta captura."
+      ,"Replace": "Apagar e substituir"
+      ,"Cancel": "Cancelar captura"
     },
     "Thargunn": {
       "Name": "Thar’gunn — A Décima Vida",

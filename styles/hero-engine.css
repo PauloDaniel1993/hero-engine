@@ -1421,9 +1421,12 @@ html[data-hero-engine-theme="storm"] #scene-controls [data-tool="hero-engine-gm"
 .hero-engine-panel .he-record-details b { color: rgba(255,255,255,.8); }
 .hero-engine-panel .he-record-slot footer { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .5rem; }
 .hero-engine-panel .he-record-slot footer button { width: auto; min-height: 1.75rem; margin: 0; padding: .25rem .5rem; border-color: rgba(222,153,43,.3); font-size: .58rem; }
+.hero-engine-panel .he-record-slot footer select { min-width: 10rem; flex: 1 1 12rem; border: 1px solid rgba(255,255,255,.13); color: rgba(255,255,255,.9); background: #1c202a; }
 .hero-engine-panel .he-record-slot.is-empty { border-style: dashed; opacity: .62; }
 .hero-engine-panel .he-record-slot.is-blocked { border-color: rgba(205,75,75,.3); background: rgba(116,31,31,.11); }
 .hero-engine-panel .he-record-slot.is-temporary { border-color: rgba(80,160,222,.28); }
+.hero-engine-panel .he-record-slot.is-pending { border-color: rgba(235,168,54,.48); background: linear-gradient(120deg,rgba(179,106,22,.16),rgba(255,255,255,.025)); box-shadow: inset .2rem 0 #d99a35; }
+.hero-engine-panel .he-record-slot.is-pending > p { margin: .45rem 0 0; color: rgba(255,255,255,.66); font-size: .62rem; }
 .hero-engine-panel .he-record-slot.is-overflow { opacity: .7; }
 .hero-engine-panel .he-record-recovery { margin: 0 .65rem .55rem; padding: .45rem; border: 1px solid rgba(230,86,74,.3); border-radius: .4rem; color: #e88b7e; background: rgba(127,38,31,.14); font-size: .62rem; }
 @media (max-width: 560px) { .hero-engine-panel .he-record-tools { grid-template-columns: 1fr; } }

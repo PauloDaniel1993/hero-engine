@@ -44,8 +44,10 @@ export function registerCoreSettings(): void {
     default: [],
   });
   game.settings.register(MODULE_ID, SETTINGS.backupEvidence, {
+    name: "HEROENGINE.Settings.BackupEvidence.Name",
+    hint: "HEROENGINE.Settings.BackupEvidence.Hint",
     scope: "world",
-    config: false,
+    config: true,
     type: String,
     default: "",
   });

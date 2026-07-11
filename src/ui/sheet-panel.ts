@@ -195,13 +195,23 @@ function renderMechanic(att: Attachment, plugin: MechanicPlugin, state: Instance
         ${slot.blocked ? `<p>${escapeHtml(slot.blocked.reason)}</p>` : ""}${details ? `<div class="he-record-details">${details}</div>` : ""}
         ${actions ? `<footer>${actions}</footer>` : ""}</article>`;
     }).join("");
+    const eraseOptions = allSlots.filter((slot) => slot.record && !slot.blocked).map((slot) => `<option value="${slot.record!.id}">${escapeHtml(String(slot.record!.data["name"] ?? slot.record!.id))}</option>`).join("");
+    const pendingRows = snapshot.pending.map((entry) => {
+      const title = String(entry.record.data["name"] ?? entry.record.id);
+      return `<article class="he-record-slot is-pending" data-he-record data-status="pending" data-search="${escapeHtml(`${title} ${JSON.stringify(entry.record.data)}`.toLocaleLowerCase())}">
+        <header><span class="he-record-index"><i class="fa-solid fa-hourglass-half"></i></span><strong>${escapeHtml(title)}</strong><span class="he-record-badges"><i>${localize("HEROENGINE.Records.Pending")}</i></span></header>
+        <p>${escapeHtml(localize("HEROENGINE.Records.PendingHint"))}</p>
+        <footer><select data-he-pending-erase aria-label="${escapeHtml(localize("HEROENGINE.Records.Replace"))}">${eraseOptions}</select>
+          <button type="button" data-he="pending-replace" data-plugin="${plugin.id}" data-collection="${collection.id}" data-pending="${entry.id}">${escapeHtml(localize("HEROENGINE.Records.Replace"))}</button>
+          <button type="button" data-he="pending-cancel" data-plugin="${plugin.id}" data-collection="${collection.id}" data-pending="${entry.id}">${escapeHtml(localize("HEROENGINE.Records.Cancel"))}</button></footer></article>`;
+    }).join("");
     parts.push(`<section class="he-record-collection" data-he-collection="${collection.id}" data-presentation-key="${escapeHtml(presentationKey)}">
       <header class="he-record-heading"><div><i class="fa-solid fa-layer-group"></i><span><strong>${escapeHtml(localize(collection.labelKey))}</strong>
         <small>${collection.descriptionKey ? escapeHtml(localize(collection.descriptionKey)) : ""}</small></span></div><b>${snapshot.slots.filter((slot) => slot.record).length}/${snapshot.capacity}</b></header>
       <div class="he-record-tools"><label><i class="fa-solid fa-magnifying-glass"></i><input type="search" data-he-record-search value="${escapeHtml(presentation.search ?? "")}" placeholder="${escapeHtml(localize("HEROENGINE.Records.Search"))}" /></label>
-        <select data-he-record-filter><option value="all" ${!presentation.filter || presentation.filter === "all" ? "selected" : ""}>${localize("HEROENGINE.Records.All")}</option><option value="permanent" ${presentation.filter === "permanent" ? "selected" : ""}>${localize("HEROENGINE.Records.Permanent")}</option><option value="temporary" ${presentation.filter === "temporary" ? "selected" : ""}>${localize("HEROENGINE.Records.Temporary")}</option><option value="blocked" ${presentation.filter === "blocked" ? "selected" : ""}>${localize("HEROENGINE.Records.Blocked")}</option><option value="empty" ${presentation.filter === "empty" ? "selected" : ""}>${localize("HEROENGINE.Records.Empty")}</option></select></div>
+        <select data-he-record-filter><option value="all" ${!presentation.filter || presentation.filter === "all" ? "selected" : ""}>${localize("HEROENGINE.Records.All")}</option><option value="permanent" ${presentation.filter === "permanent" ? "selected" : ""}>${localize("HEROENGINE.Records.Permanent")}</option><option value="temporary" ${presentation.filter === "temporary" ? "selected" : ""}>${localize("HEROENGINE.Records.Temporary")}</option><option value="blocked" ${presentation.filter === "blocked" ? "selected" : ""}>${localize("HEROENGINE.Records.Blocked")}</option><option value="pending" ${presentation.filter === "pending" ? "selected" : ""}>${localize("HEROENGINE.Records.Pending")}</option><option value="empty" ${presentation.filter === "empty" ? "selected" : ""}>${localize("HEROENGINE.Records.Empty")}</option></select></div>
       ${snapshot.recovery ? `<p class="he-record-recovery"><i class="fa-solid fa-triangle-exclamation"></i>${escapeHtml(snapshot.recovery)}</p>` : ""}
-      <div class="he-record-list">${rows}</div></section>`);
+      <div class="he-record-list">${pendingRows}${rows}</div></section>`);
   }
 
   // Active transformation countdown.
@@ -311,6 +321,13 @@ function bindPanel(root: HTMLElement, actor: any): void {
       } else if (kind === "record-action") {
         const ctx = makeContext(att);
         await ctx?.records.runAction(button.dataset["collection"]!, button.dataset["record"]!, button.dataset["action"]!);
+      } else if (kind === "pending-replace") {
+        const ctx = makeContext(att);
+        const eraseId = button.closest<HTMLElement>("[data-he-record]")?.querySelector<HTMLSelectElement>("[data-he-pending-erase]")?.value;
+        if (eraseId) await ctx?.records.replacePending(button.dataset["collection"]!, button.dataset["pending"]!, eraseId);
+      } else if (kind === "pending-cancel") {
+        const ctx = makeContext(att);
+        await ctx?.records.cancelPending(button.dataset["collection"]!, button.dataset["pending"]!);
       } else if (kind === "trigger") {
         const ctx = makeContext(att);
         await ctx?.fireTrigger(id, { event: "manual" });

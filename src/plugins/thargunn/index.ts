@@ -202,15 +202,19 @@ async function reconcilePenaltyEffects(ctx: MechanicContext): Promise<void> {
   if (current > max) await actor.update({ "system.attributes.hp.value": max });
 }
 
-async function eraseEcho(ctx: MechanicContext, collection: RecordCollectionDef, record: MechanicRecord): Promise<void> {
+async function resolveErasurePrice(ctx: MechanicContext, record: MechanicRecord): Promise<void> {
   const tier = String(record.data["tier"] ?? "minor") as "minor" | "strong" | "legendary" | "mythic";
   const dc = erasureDc(tier);
   const save = await silentSave(actorOf(ctx), "wis", dc);
-  await ctx.records.remove(collection.id, record.id, `erase:${record.id}`);
   await ctx.state.adjust("hungerTemporary", 1);
   if (save?.success) return;
   const result = await ctx.rollTable("erasure-price");
   await ctx.postChat(`${P}.Echo.ErasureFailed`, { result: game.i18n.localize(result.textKey), dc });
+}
+
+async function eraseEcho(ctx: MechanicContext, collection: RecordCollectionDef, record: MechanicRecord): Promise<void> {
+  await resolveErasurePrice(ctx, record);
+  await ctx.records.remove(collection.id, record.id, `erase:${record.id}`);
 }
 
 async function activateUltimate(ctx: MechanicContext): Promise<void> {
@@ -452,6 +456,9 @@ const hooks = {
   async onRecordAction(ctx: MechanicContext, collection: RecordCollectionDef, record: MechanicRecord, action: RecordActionDef) {
     if (action.id === "use") await useEcho(ctx, collection, record);
     if (action.id === "erase") await eraseEcho(ctx, collection, record);
+  },
+  async onRecordReplacement(ctx: MechanicContext, collection: RecordCollectionDef, _pending: MechanicRecord, erased: MechanicRecord) {
+    if (collection.id === "echoes") await resolveErasurePrice(ctx, erased);
   },
   async onAdjudicated(ctx: MechanicContext, adjudication: any, resultId: string) {
     if (adjudication.id === "purification") {

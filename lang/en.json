@@ -5,6 +5,10 @@
         "Name": "Dawn hour",
         "Hint": "World-time hour (0-23) at which 'dawn' recharges fire. Default 6."
       },
+      "BackupEvidence": {
+        "Name": "Verified backup evidence",
+        "Hint": "Required before managed actor installation: enter a backup path, snapshot ID, or checksum record."
+      },
       "Theme": {
         "Name": "Hero Engine theme",
         "Hint": "World-default visual theme; each client may override it locally.",
@@ -151,6 +155,10 @@
       "Blocked": "Blocked",
       "Empty": "Empty slot",
       "Overflow": "Overflow"
+      ,"Pending": "Pending capture"
+      ,"PendingHint": "All usable slots are full. Choose the Echo to erase, or cancel this capture."
+      ,"Replace": "Erase and replace"
+      ,"Cancel": "Cancel capture"
     },
     "Thargunn": {
       "Name": "Thar’gunn — The Tenth Life",
