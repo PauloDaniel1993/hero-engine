@@ -1,7 +1,7 @@
 import type { SecureTargetRequest } from "../api/types";
 import { MODULE_ID } from "../constants";
 import { getPlugin } from "./registry";
-import { makeContext } from "./runtime";
+import { makeContext, secureRequestRemovalUpdate } from "./runtime";
 import { activeGM } from "./sockets";
 import { canonicalActor, resolveAttachment } from "./state";
 
@@ -22,6 +22,7 @@ export function initSecureTargetRequests(): void {
       return;
     }
     for (const [requestId, request] of Object.entries(requests)) {
+      if (requestId.startsWith("-=") || !request || typeof request !== "object") continue;
       try {
         if (!request.pluginId || !request.eventId || !request.targetUuid) throw new Error("malformed request");
         if (Date.now() - Number(request.createdAt ?? 0) > 30_000) throw new Error("expired request");
@@ -40,7 +41,7 @@ export function initSecureTargetRequests(): void {
       } catch (error) {
         console.warn("hero-engine | secure target request rejected", requestId, error);
       } finally {
-        await actor.unsetFlag(MODULE_ID, `secureRequests.${requestId}`);
+        await actor.update(secureRequestRemovalUpdate(requestId));
       }
     }
   });

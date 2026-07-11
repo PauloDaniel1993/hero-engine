@@ -11,6 +11,7 @@ import type {
   PromptDef,
   PromptOutcome,
   PromptResult,
+  SecureTargetRequest,
   StateOp,
   TriggerDef,
   TriggerPayload,
@@ -42,6 +43,15 @@ import { makeRecordAccessor } from "./records";
 /** Cooldown sentinels stored in state.cooldowns. */
 const CD_READY = -1;
 const CD_SPENT = -2; // waiting for a rest/dawn event
+
+/** Foundry dot-path updates used for owner-authored, server-attributed requests. */
+export function secureRequestUpdate(requestId: string, pluginId: string, request: SecureTargetRequest, createdAt = Date.now()): Record<string, unknown> {
+  return { [`flags.hero-engine.secureRequests.${requestId}`]: { ...request, createdAt, pluginId } };
+}
+
+export function secureRequestRemovalUpdate(requestId: string): Record<string, unknown> {
+  return { [`flags.hero-engine.secureRequests.-=${requestId}`]: null };
+}
 
 // ---------------------------------------------------------------------------
 // Evaluation data
@@ -236,9 +246,8 @@ export function makeContext(att: Attachment): MechanicContext | null {
     },
     records: makeRecordAccessor(att, plugin, () => ctx),
     requestSecureTarget: async (request) => {
-      await att.canonicalActor.setFlag("hero-engine", `secureRequests.${foundry.utils.randomID()}`, {
-        ...request, createdAt: Date.now(), pluginId: plugin.id,
-      });
+      const requestId = foundry.utils.randomID();
+      await att.canonicalActor.update(secureRequestUpdate(requestId, plugin.id, request));
     },
     evalFormula: (formula) => {
       const s = state();
