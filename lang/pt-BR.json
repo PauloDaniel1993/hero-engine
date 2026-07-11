@@ -217,6 +217,7 @@
         "CategoryHint": "Escolha uma categoria redigida. O Mestre validará o alvo privado e a característica elegível.",
         "SentToGm": "O pedido de Sifão foi enviado para validação autoritativa do Mestre.",
         "NoFeature": "Nenhuma característica suportada estava elegível para captura.",
+        "TooStrong": "{echo} é um Eco {tier}, além do limite atual {maxTier} da arma.",
         "Resisted": "{target} resiste ao Sifão ({total} contra CD {dc}).",
         "Captured": "{echo} é arrancado de {target} e se torna um Eco Oco.",
         "Suppressed": "Identidade Sifonada",

@@ -217,6 +217,7 @@
         "CategoryHint": "Choose a redacted category. The GM will validate the private target and eligible feature.",
         "SentToGm": "The Siphon request was sent for authoritative GM validation.",
         "NoFeature": "No supported feature was eligible for capture.",
+        "TooStrong": "{echo} is a {tier} Echo, beyond the weapon's current {maxTier} limit.",
         "Resisted": "{target} resists the Siphon ({total} vs DC {dc}).",
         "Captured": "{echo} is torn from {target} and becomes a Hollow Echo.",
         "Suppressed": "Identity Siphoned",

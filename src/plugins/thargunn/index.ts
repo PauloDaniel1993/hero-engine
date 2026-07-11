@@ -1,5 +1,5 @@
 import type { MechanicContext, MechanicPlugin, MechanicRecord, PromptResult, RecordActionDef, RecordCollectionDef, TriggerDef, TriggerPayload } from "../../api";
-import { ECHO_CATEGORIES, canUseUltimate, echoCost, echoTier, erasureDc, fractureConsequences, riteOutcome, soulDamageDice, ultimateExpiryDamage } from "./rules";
+import { ECHO_CATEGORIES, canUseUltimate, echoCost, echoTier, erasureDc, fractureConsequences, riteOutcome, soulDamageDice, ultimateExpiryDamage, weaponProgression } from "./rules";
 
 const P = "HEROENGINE.Thargunn";
 const MANAGED_FLAG = "managed";
@@ -71,6 +71,9 @@ async function offerSiphon(ctx: MechanicContext, target: any, eventId: string, t
     await ctx.postChat(`${P}.Siphon.SentToGm`);
     return;
   }
+  const settled = ctx.state.getFlag<string[]>("settledSiphonEvents") ?? [];
+  if (settled.includes(eventId)) return;
+  await ctx.state.setFlag("settledSiphonEvents", [...settled.slice(-99), eventId]);
   const available = eligibleFeatures(target);
   const matching = chosenCategory ? available.filter((feature) => feature.category === chosenCategory) : available;
   const feature = await chooseFeature(matching.length ? matching : available);
@@ -79,7 +82,7 @@ async function offerSiphon(ctx: MechanicContext, target: any, eventId: string, t
     return;
   }
   const actor = actorOf(ctx);
-  const dc = 8 + Number(actor.system?.attributes?.prof ?? 0) + Number(actor.system?.abilities?.str?.mod ?? 0);
+  const dc = Number(ctx.config<number>("siphonBaseDc") ?? 8) + Number(actor.system?.attributes?.prof ?? 0) + Number(actor.system?.abilities?.str?.mod ?? 0);
   const save = await silentSave(target, "cha", dc);
   if (!save || save.success) {
     await ctx.postChat(`${P}.Siphon.Resisted`, { target: target.name, total: save?.total ?? "—", dc });
@@ -87,15 +90,22 @@ async function offerSiphon(ctx: MechanicContext, target: any, eventId: string, t
   }
   const category = ECHO_CATEGORIES.includes(feature.category as any) ? feature.category as any : "trait";
   const tier = echoTier(category, feature.spellLevel);
+  const maxTier = weaponProgression(ctx.state.get("weaponLevel")).maxTier;
+  const tierRank = ["minor", "strong", "legendary", "mythic"];
+  if (tierRank.indexOf(tier) > tierRank.indexOf(maxTier)) {
+    await ctx.postChat(`${P}.Siphon.TooStrong`, { echo: feature.label, tier, maxTier });
+    return;
+  }
   const temporary = temporaryOverride ?? Number(target.system?.attributes?.hp?.value ?? 1) > 0;
   const collectionId = temporary ? "temporary-echoes" : "echoes";
+  const temporarySeconds = Number(ctx.config<number>("temporaryEchoSeconds") ?? 60);
   const record = await ctx.records.create(collectionId, {
     name: feature.label, category, tier, cost: echoCost(category, feature.spellLevel), soulDamage: soulDamageDice(tier),
     description: feature.description, sourceOpaqueId: feature.opaqueId, sourceLabel: target.name,
   }, {
     temporary,
     pendingWhenFull: !temporary,
-    lifecycle: temporary ? { type: "world-time", worldTime: Number(game.time?.worldTime ?? 0) + 60 } : { type: "permanent" },
+    lifecycle: temporary ? { type: "world-time", worldTime: Number(game.time?.worldTime ?? 0) + temporarySeconds } : { type: "permanent" },
     idempotencyKey: `siphon:${eventId}:${feature.opaqueId}`,
   });
   await ctx.state.adjust("hungerTemporary", 1);
@@ -104,7 +114,7 @@ async function offerSiphon(ctx: MechanicContext, target: any, eventId: string, t
   if (temporary) {
     await target.createEmbeddedDocuments?.("ActiveEffect", [{
       name: game.i18n.localize(`${P}.Siphon.Suppressed`), img: "modules/hero-engine/assets/thargunn/icons/echo-trait.webp",
-      duration: { rounds: 10, seconds: 60 }, flags: { "hero-engine": { suppressionId: record.id, sourceOpaqueId: feature.opaqueId } },
+      duration: { rounds: Math.max(1, Math.ceil(temporarySeconds / 6)), seconds: temporarySeconds }, flags: { "hero-engine": { suppressionId: record.id, sourceOpaqueId: feature.opaqueId } },
     }]);
   }
 }
@@ -213,8 +223,9 @@ async function runRite(ctx: MechanicContext): Promise<void> {
   const actor = actorOf(ctx);
   const rolls: number[] = [];
   let naturalOnes = 0;
+  const riteDc = Number(ctx.config<number>("riteDc") ?? 25);
   for (const ability of ["str", "wis", "cha"]) {
-    const result = await silentSave(actor, ability, 25);
+    const result = await silentSave(actor, ability, riteDc);
     rolls.push(result?.total ?? 0);
     if (result?.natural === 1) naturalOnes += 1;
   }
@@ -362,7 +373,7 @@ const hooks = {
       if (ctx.state.transform()?.id === "tenth-march") await ctx.state.adjust("fractures", 1);
       await ctx.state.setFlag("fieldActive", true);
       await ctx.state.setFlag("fieldLocked", true);
-      await ctx.state.setFlag("fieldExpires", Number(game.time?.worldTime ?? 0) + 60);
+      await ctx.state.setFlag("fieldExpires", Number(game.time?.worldTime ?? 0) + Number(ctx.config<number>("fieldSeconds") ?? 60));
       await createMarchField(ctx);
       await ctx.postChat(`${P}.Field.Activated`, { charges });
     } else if (action.id === "ultimate") await activateUltimate(ctx);
@@ -375,7 +386,7 @@ const hooks = {
     else if (action.id === "devastating-strike") {
       const target = [...(game.user?.targets ?? [])][0]?.actor;
       if (!target) throw new Error(game.i18n.localize(`${P}.Errors.SelectTarget`));
-      const damage = await ctx.rollDice("4d12 + 4d12", `${P}.Ultimate.DevastatingDamage`);
+      const damage = await ctx.rollDice(String(ctx.config<string>("provisionalStrikeDamage") ?? "4d12 + 4d12"), `${P}.Ultimate.DevastatingDamage`);
       await target.applyDamage?.(damage);
     } else if (action.id === "legendary-echo") {
       const record = ctx.records.list("echoes").slots.find((slot) => slot.record)?.record;
@@ -494,7 +505,7 @@ export const thargunnMythic: MechanicPlugin = {
     { id: "skeldr-early-return", labelKey: `${P}.Skeldr.EarlyReturn`, gmOnly: true, runHook: true },
     { id: "record-legend", labelKey: `${P}.Legends.Add`, gmOnly: true, runHook: true },
   ],
-  transformations: [{ id: "tenth-march", labelKey: `${P}.Ultimate.Name`, strategy: "actor-swap", durationRounds: 5,
+  transformations: [{ id: "tenth-march", labelKey: `${P}.Ultimate.Name`, strategy: "actor-swap", durationRounds: "@cfg.ultimateRounds",
     swap: { formActorName: "Thar’gunn - Ultimate", hpCarry: "keep-percent" }, onExpire: { runHook: true, chatKey: `${P}.Ultimate.Ended` } }],
   tables: [{ id: "erasure-price", labelKey: `${P}.Echo.ErasureTable`, die: "1d6", entries: [1,2,3,4,5,6].map((roll) => ({ min: roll, max: roll, textKey: `${P}.Echo.Erasure${roll}` })) }],
   adjudications: [
