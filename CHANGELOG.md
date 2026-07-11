@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.2 — 2026-07-11
+
+- Make the complete Mechanics card and every character, active-state,
+  record-collection, action, and manual-trigger region independently
+  collapsible.
+- Persist each region's open/closed state per client, actor, and mechanic.
+- Add consistent disclosure styling, compact closed summaries, counters, and
+  keyboard-accessible native controls in English and pt-BR.
+
 ## 1.0.1 — 2026-07-11
 
 - Fix Foundry 14 managed activity IDs so base/Ultimate features and all four
