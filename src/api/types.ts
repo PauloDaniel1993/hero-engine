@@ -497,6 +497,13 @@ export interface HeroEngineAPI {
   detach(actor: ActorDoc, pluginId: string): Promise<void>;
   /** Context for an attached instance, or null if not attached. */
   contextFor(actor: ActorDoc, pluginId: string): MechanicContext | null;
+  /** Stable macro helper: open the standalone Mechanics window for an actor. */
+  openMechanics(actor: ActorDoc): unknown;
+  /** Stable macro helper: run one declared action without importing engine internals. */
+  runAction(actor: ActorDoc, pluginId: string, actionId: string): Promise<void>;
+  /** Preview or execute the built-in Thar’gunn managed-content reconciliation. */
+  previewThargunnInstall(options?: { baseActorId?: string; ultimateActorId?: string }): Promise<unknown>;
+  installThargunn(options?: { baseActorId?: string; ultimateActorId?: string; dryRun?: boolean }): Promise<unknown>;
   /** Version of the engine contract, for plugin compatibility checks. */
   readonly apiVersion: string;
 }

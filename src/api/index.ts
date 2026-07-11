@@ -8,6 +8,10 @@ import { API_VERSION } from "../constants";
 import { attachMechanic, detachMechanic } from "../engine/attach";
 import { getPlugin, listPlugins, registerPlugin } from "../engine/registry";
 import { contextFor } from "../engine/runtime";
+import { executeAction } from "../engine/runtime";
+import { resolveAttachment } from "../engine/state";
+import { openActorMechanics } from "../ui/sheet-panel";
+import { installThargunn, previewThargunnInstall } from "../managed/thargunn-installer";
 
 export type * from "./types";
 
@@ -32,5 +36,15 @@ export function createApi(): HeroEngineAPI {
     contextFor(actor, pluginId) {
       return contextFor(actor, pluginId);
     },
+    openMechanics(actor) {
+      return openActorMechanics(actor);
+    },
+    async runAction(actor, pluginId, actionId) {
+      const att = resolveAttachment(actor, pluginId);
+      if (!att) throw new Error(`hero-engine: ${pluginId} is not attached`);
+      await executeAction(att, actionId);
+    },
+    previewThargunnInstall,
+    installThargunn,
   };
 }

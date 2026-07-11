@@ -1,0 +1,26 @@
+[
+  {
+    "_id": "TgSkeldrActor001",
+    "name": "Skeldr, Guardião Trovejante",
+    "type": "npc",
+    "img": "modules/hero-engine/assets/thargunn/skeldr-portrait.webp",
+    "system": {
+      "abilities": { "str": { "value": 24 }, "dex": { "value": 12 }, "con": { "value": 22 }, "int": { "value": 8 }, "wis": { "value": 18 }, "cha": { "value": 16 } },
+      "attributes": { "hp": { "value": 210, "max": 210 }, "ac": { "calc": "natural", "flat": 17 }, "movement": { "walk": 80 } },
+      "details": { "type": { "value": "celestial" }, "cr": 7 }
+    },
+    "prototypeToken": { "name": "Skeldr", "actorLink": true, "width": 3, "height": 3, "texture": { "src": "modules/hero-engine/assets/thargunn/skeldr-token.webp", "scaleX": 1, "scaleY": 1 } },
+    "items": [], "effects": [], "ownership": { "default": 0 },
+    "flags": { "hero-engine": { "managed": { "key": "thargunn.actor.skeldr", "contentVersion": 1, "templateVersion": 1, "sourceHash": "pack-v1" } } }
+  },
+  {
+    "_id": "TgUltimateAct001",
+    "name": "Thar’gunn - Ultimate",
+    "type": "character",
+    "img": "modules/hero-engine/assets/thargunn/thargunn-ultimate-portrait.webp",
+    "system": { "details": { "level": 20 }, "attributes": { "hp": { "value": 200, "max": 200 }, "movement": { "walk": 40 } }, "traits": { "size": "huge" } },
+    "prototypeToken": { "name": "Thar’gunn — Ultimate", "actorLink": true, "width": 3, "height": 3, "texture": { "src": "modules/hero-engine/assets/thargunn/thargunn-ultimate-token.webp", "scaleX": 1, "scaleY": 1 } },
+    "items": [], "effects": [], "ownership": { "default": 0 },
+    "flags": { "hero-engine": { "managed": { "key": "thargunn.actor.ultimate", "contentVersion": 1, "templateVersion": 1, "sourceHash": "pack-v1" }, "chassis": { "provider": "hero-engine-native", "version": 1, "provisionalStrike": true } } }
+  }
+]

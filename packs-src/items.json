@@ -1,0 +1,29 @@
+[
+  {
+    "_id": "TgTenthLifeIt001",
+    "name": "Ladrão da Décima Vida",
+    "type": "weapon",
+    "img": "modules/hero-engine/assets/thargunn/tenth-life-thief.webp",
+    "system": { "description": { "value": "<p>Arma mítica senciente que rouba aquilo que torna uma criatura única.</p>" }, "identifier": "ladrao-da-decima-vida", "activities": {} },
+    "effects": [], "ownership": { "default": 0 },
+    "flags": { "hero-engine": { "managed": { "key": "thargunn.item.weapon", "contentVersion": 1, "templateVersion": 1, "sourceHash": "pack-v1" } } }
+  },
+  {
+    "_id": "TgSiphonFeat0001",
+    "name": "Sifão de Essência",
+    "type": "feat",
+    "img": "modules/hero-engine/assets/thargunn/icons/echo-trait.webp",
+    "system": { "description": { "value": "<p>Roube uma característica elegível e transforme-a em Eco Oco.</p>" }, "identifier": "sifao-de-essencia", "activities": {} },
+    "effects": [], "ownership": { "default": 0 },
+    "flags": { "hero-engine": { "managed": { "key": "thargunn.item.siphon", "contentVersion": 1, "templateVersion": 1, "sourceHash": "pack-v1" } } }
+  },
+  {
+    "_id": "TgUltimateFt0001",
+    "name": "A Marcha da Décima Lenda",
+    "type": "feat",
+    "img": "modules/hero-engine/assets/thargunn/thargunn-ultimate-portrait.webp",
+    "system": { "description": { "value": "<p>Ultimate nativa de nível 20 por cinco turnos de Thar’gunn.</p>" }, "identifier": "marcha-da-decima-lenda", "activities": {} },
+    "effects": [], "ownership": { "default": 0 },
+    "flags": { "hero-engine": { "managed": { "key": "thargunn.item.ultimate", "contentVersion": 1, "templateVersion": 1, "sourceHash": "pack-v1" } } }
+  }
+]

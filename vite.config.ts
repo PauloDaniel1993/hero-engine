@@ -11,7 +11,7 @@ function copyFoundryStatics(): Plugin {
       const out = resolve(__dirname, "dist");
       mkdirSync(out, { recursive: true });
       cpSync(resolve(__dirname, "module.json"), resolve(out, "module.json"));
-      for (const dir of ["lang", "styles"]) {
+      for (const dir of ["lang", "styles", "assets", "packs"]) {
         cpSync(resolve(__dirname, dir), resolve(out, dir), { recursive: true });
       }
     },
