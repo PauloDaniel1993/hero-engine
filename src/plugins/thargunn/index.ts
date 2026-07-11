@@ -32,8 +32,8 @@ async function syncHunger(ctx: MechanicContext): Promise<void> {
   await ctx.state.set("hungerTotal", ctx.state.get("hungerTemporary") + ctx.state.get("hungerPermanent"));
 }
 
-async function silentSave(actor: any, ability: string, dc: number): Promise<{ success: boolean; total: number; natural: number } | null> {
-  const rolls = await actor.rollSavingThrow?.({ ability }, {}, { create: false });
+async function silentSave(actor: any, ability: string, dc: number, advantage = false): Promise<{ success: boolean; total: number; natural: number } | null> {
+  const rolls = await actor.rollSavingThrow?.({ ability }, advantage ? { advantage: true } : {}, { create: false });
   const roll = Array.isArray(rolls) ? rolls[0] : rolls;
   if (!roll) return null;
   const d20 = roll.dice?.find((die: any) => die.faces === 20);
@@ -578,7 +578,7 @@ const hooks = {
     const broken = ctx.state.getFlag<boolean>("bondBroken") === true;
     if (threshold.at === 5) await ctx.queueAdjudication(broken ? "legend-weight-demand" : "hunger-cruel-demand");
     if (threshold.at === 7) {
-      const save = await silentSave(actor, "wis", 18);
+      const save = await silentSave(actor, "wis", 18, ctx.state.getFlag<boolean>("skeldrPresent") !== false);
       if (!save?.success) await ctx.queueAdjudication(broken ? "legend-weight-control" : "hunger-control-loss");
     }
     if (threshold.at === 10) await ctx.queueAdjudication(broken ? "legend-memory-distortion" : "hunger-name-fragment");
