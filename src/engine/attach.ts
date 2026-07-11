@@ -7,6 +7,7 @@ import { MODULE_ID } from "../constants";
 import { localize } from "./i18n";
 import { getPlugin } from "./registry";
 import { makeContext, buildEvalData } from "./runtime";
+import { ensureAttachmentReady } from "./records";
 import {
   initialState,
   readState,
@@ -48,7 +49,10 @@ export async function attachMechanic(actor: any, pluginId: string, options: { it
   await setActorAttachment(stableActor, pluginId, plugin.archetype === "item" ? { itemUuid: options.item.uuid } : {});
 
   const ctx = makeContext(att);
-  if (ctx) await plugin.hooks?.onAttach?.(ctx);
+  if (ctx) {
+    await ensureAttachmentReady(att, plugin, () => ctx);
+    await plugin.hooks?.onAttach?.(ctx);
+  }
   ui.notifications?.info(localize("HEROENGINE.Attach.Done", { mechanic: localize(plugin.nameKey) }));
 }
 

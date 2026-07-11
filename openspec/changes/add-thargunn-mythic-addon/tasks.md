@@ -21,22 +21,22 @@
 
 ## 3. Record collection public API and state schema
 
-- [ ] 3.1 Add typed record collection, record action, record lifecycle, and record mutation definitions to `src/api/types.ts` and emitted declarations.
-- [ ] 3.2 Extend plugin validation for collection IDs, schemas, capacity formulas, action references, visibility, and lifecycle policies.
-- [ ] 3.3 Add versioned `records` storage and schema metadata to instance state while preserving scalar-only state compatibility.
-- [ ] 3.4 Implement JSON-safety validation and stable record-ID generation.
-- [ ] 3.5 Implement authoritative list/get/create/update/remove/block/unblock/expire context methods with permission checks and audit entries.
-- [ ] 3.6 Implement capacity calculation, blocked/empty/occupied states, overflow preservation, and atomic full-collection rejection.
-- [ ] 3.7 Implement transactional pending-record replacement and cancellation.
-- [ ] 3.8 Implement ordered collection migrations, rollback-on-failure, and read-only recovery for newer stored schemas.
-- [ ] 3.9 Add unit tests for validation, serialization, permissions, capacity changes, replacement atomicity, migrations, and downgrade safety.
+- [x] 3.1 Add typed record collection, record action, record lifecycle, and record mutation definitions to `src/api/types.ts` and emitted declarations.
+- [x] 3.2 Extend plugin validation for collection IDs, schemas, capacity formulas, action references, visibility, and lifecycle policies.
+- [x] 3.3 Add versioned `records` storage and schema metadata to instance state while preserving scalar-only state compatibility.
+- [x] 3.4 Implement JSON-safety validation and stable record-ID generation.
+- [x] 3.5 Implement authoritative list/get/create/update/remove/block/unblock/expire context methods with permission checks and audit entries.
+- [x] 3.6 Implement capacity calculation, blocked/empty/occupied states, overflow preservation, and atomic full-collection rejection.
+- [x] 3.7 Implement transactional pending-record replacement and cancellation.
+- [x] 3.8 Implement ordered collection migrations, rollback-on-failure, and read-only recovery for newer stored schemas.
+- [x] 3.9 Add unit tests for validation, serialization, permissions, capacity changes, replacement atomicity, migrations, and downgrade safety.
 
 ## 4. Collection UI and linked activities
 
-- [ ] 4.1 Add reusable collection rendering with capacity, temporary/permanent/blocked badges, ordering, empty states, and record details.
-- [ ] 4.2 Add collection search, category filters, independent scrolling, keyboard focus, and responsive layouts.
-- [ ] 4.3 Persist collection section/search/filter presentation per client without world-state writes.
-- [ ] 4.4 Add record-action dispatch through the public plugin context.
+- [x] 4.1 Add reusable collection rendering with capacity, temporary/permanent/blocked badges, ordering, empty states, and record details.
+- [x] 4.2 Add collection search, category filters, independent scrolling, keyboard focus, and responsive layouts.
+- [x] 4.3 Persist collection section/search/filter presentation per client without world-state writes.
+- [x] 4.4 Add record-action dispatch through the public plugin context.
 - [ ] 4.5 Add stable managed Item/Activity resolution and a repair state when linked content is missing.
 - [ ] 4.6 Add UI tests or deterministic render fixtures for large, empty, blocked, temporary, and missing-link collections.
 

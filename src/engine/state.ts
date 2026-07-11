@@ -6,6 +6,7 @@
  * State is inert without the module and travels with actor/item exports.
  */
 import type { MechanicPlugin } from "../api/types";
+import type { PendingRecordReplacement, RecordSlot } from "../api/types";
 import { AUDIT_CAP, FLAGS, MODULE_ID } from "../constants";
 import { resolveNumeric } from "./formulas";
 import { clampValue } from "./trackers";
@@ -32,6 +33,7 @@ export interface TransformState {
 }
 
 export interface InstanceState {
+  schemaVersion: number;
   values: Record<string, number>; // trackers + resources by id
   flags: Record<string, unknown>; // named state flags
   stances: Record<string, string | null>; // groupId -> active stance id
@@ -39,6 +41,9 @@ export interface InstanceState {
   cooldowns: Record<string, number>; // actionId -> last-used worldTime seconds
   ultimateAttempted?: boolean;
   audit: AuditEntry[];
+  collections: Record<string, { schemaVersion: number; slots: RecordSlot[]; pending: PendingRecordReplacement[]; recovery?: string }>;
+  /** Bounded persisted event IDs used to make hook/workflow settlement idempotent. */
+  processedEvents: string[];
 }
 
 export interface Attachment {
@@ -71,16 +76,74 @@ export function isTransformedActor(actor: any): boolean {
 }
 
 function emptyState(): InstanceState {
-  return { values: {}, flags: {}, stances: {}, transform: null, cooldowns: {}, audit: [] };
+  return { schemaVersion: 2, values: {}, flags: {}, stances: {}, transform: null, cooldowns: {}, audit: [], collections: {}, processedEvents: [] };
+}
+
+function clone<T>(value: T): T {
+  return typeof structuredClone === "function" ? structuredClone(value) : JSON.parse(JSON.stringify(value)) as T;
 }
 
 export function readState(stateDoc: any, pluginId: string): InstanceState | null {
   const all = stateDoc.getFlag(MODULE_ID, FLAGS.mechanics) as Record<string, InstanceState> | undefined;
-  return all?.[pluginId] ? { ...emptyState(), ...all[pluginId] } : null;
+  const raw = all?.[pluginId];
+  if (!raw) return null;
+  const copied = clone(raw);
+  return {
+    ...emptyState(),
+    ...copied,
+    values: { ...(copied.values ?? {}) },
+    flags: { ...(copied.flags ?? {}) },
+    stances: { ...(copied.stances ?? {}) },
+    cooldowns: { ...(copied.cooldowns ?? {}) },
+    collections: { ...(copied.collections ?? {}) },
+    audit: [...(copied.audit ?? [])],
+    processedEvents: [...(copied.processedEvents ?? [])],
+  };
 }
 
 export async function writeState(stateDoc: any, pluginId: string, state: InstanceState): Promise<void> {
   await stateDoc.setFlag(MODULE_ID, `${FLAGS.mechanics}.${pluginId}`, state);
+}
+
+export interface StateMutationResult<T> {
+  applied: boolean;
+  value?: T;
+  state: InstanceState;
+}
+
+const mutationLocks = new Map<string, Promise<void>>();
+
+/** Serialize read-latest/reduce/write settlements per canonical state document and plugin. */
+export async function mutateState<T>(
+  stateDoc: any,
+  pluginId: string,
+  reducer: (state: InstanceState) => T | Promise<T>,
+  options: { idempotencyKey?: string } = {}
+): Promise<StateMutationResult<T>> {
+  const lockKey = `${stateDoc.uuid ?? stateDoc.id}:${pluginId}`;
+  const previous = mutationLocks.get(lockKey) ?? Promise.resolve();
+  let release!: () => void;
+  const current = new Promise<void>((resolve) => { release = resolve; });
+  const tail = previous.catch(() => undefined).then(() => current);
+  mutationLocks.set(lockKey, tail);
+  await previous.catch(() => undefined);
+  try {
+    const state = readState(stateDoc, pluginId);
+    if (!state) throw new Error(`hero-engine: missing state for ${pluginId}`);
+    if (options.idempotencyKey && state.processedEvents.includes(options.idempotencyKey)) {
+      return { applied: false, state };
+    }
+    const value = await reducer(state);
+    if (options.idempotencyKey) {
+      state.processedEvents.push(options.idempotencyKey);
+      if (state.processedEvents.length > 200) state.processedEvents.splice(0, state.processedEvents.length - 200);
+    }
+    await writeState(stateDoc, pluginId, state);
+    return { applied: true, value, state };
+  } finally {
+    release();
+    if (mutationLocks.get(lockKey) === tail) mutationLocks.delete(lockKey);
+  }
 }
 
 export async function clearState(stateDoc: any, pluginId: string): Promise<void> {

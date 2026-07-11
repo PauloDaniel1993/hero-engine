@@ -25,6 +25,110 @@ export type Archetype = "character" | "item";
  */
 export type NumberOrFormula = number | string;
 
+export type JsonPrimitive = string | number | boolean | null;
+export type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue };
+
+export type RecordFieldType = "string" | "number" | "boolean" | "choice" | "json";
+
+export interface RecordFieldSchema {
+  key: string;
+  type: RecordFieldType;
+  labelKey: string;
+  required?: boolean;
+  choices?: string[];
+  min?: number;
+  max?: number;
+}
+
+export interface RecordLifecyclePolicy {
+  type: "permanent" | "world-time" | "combat-time" | "transform" | "manual";
+  /** Formula in seconds for world-time or turns for combat-time. */
+  duration?: NumberOrFormula;
+}
+
+export interface RecordActionDef {
+  id: string;
+  labelKey: string;
+  gmOnly?: boolean;
+  ownerOnly?: boolean;
+  destructive?: boolean;
+}
+
+/** A reusable slotted collection of structured records owned by one mechanic instance. */
+export interface RecordCollectionDef {
+  id: string;
+  labelKey: string;
+  descriptionKey?: string;
+  schemaVersion: number;
+  capacity: NumberOrFormula;
+  visibility?: "public" | "owner" | "gm";
+  fields: RecordFieldSchema[];
+  actions?: RecordActionDef[];
+  lifecycle?: RecordLifecyclePolicy;
+}
+
+export interface MechanicRecord {
+  id: string;
+  schemaVersion: number;
+  createdAt: number;
+  createdBy: string;
+  data: { [key: string]: JsonValue };
+  temporary?: boolean;
+  lifecycle?: {
+    type: RecordLifecyclePolicy["type"];
+    worldTime?: number;
+    combatUuid?: string;
+    round?: number;
+    turn?: number;
+    combatantId?: string;
+    transformActivationId?: string;
+  };
+}
+
+export interface RecordSlot {
+  id: string;
+  record: MechanicRecord | null;
+  blocked?: { reason: string; at: number; by: string } | null;
+}
+
+export interface PendingRecordReplacement {
+  id: string;
+  record: MechanicRecord;
+  createdAt: number;
+  expiresAt?: number;
+}
+
+export interface RecordCollectionSnapshot {
+  id: string;
+  schemaVersion: number;
+  capacity: number;
+  slots: RecordSlot[];
+  pending: PendingRecordReplacement[];
+  overflow: RecordSlot[];
+  recovery?: string;
+}
+
+export interface RecordCreateOptions {
+  temporary?: boolean;
+  lifecycle?: MechanicRecord["lifecycle"];
+  pendingWhenFull?: boolean;
+  idempotencyKey?: string;
+}
+
+export interface RecordAccessor {
+  list(collectionId: string): RecordCollectionSnapshot;
+  get(collectionId: string, recordId: string): MechanicRecord | null;
+  create(collectionId: string, data: { [key: string]: JsonValue }, options?: RecordCreateOptions): Promise<MechanicRecord>;
+  update(collectionId: string, recordId: string, patch: { [key: string]: JsonValue }, idempotencyKey?: string): Promise<MechanicRecord>;
+  remove(collectionId: string, recordId: string, idempotencyKey?: string): Promise<void>;
+  block(collectionId: string, slotId: string, reason: string): Promise<void>;
+  unblock(collectionId: string, slotId: string): Promise<void>;
+  expire(collectionId: string, recordId: string): Promise<void>;
+  replacePending(collectionId: string, pendingId: string, eraseRecordId: string): Promise<MechanicRecord>;
+  cancelPending(collectionId: string, pendingId: string): Promise<void>;
+  runAction(collectionId: string, recordId: string, actionId: string): Promise<void>;
+}
+
 /** Normalized events dispatched by the engine's trigger bus. */
 export type EngineEvent =
   | "attack-hit"        // this actor hit with an attack
@@ -309,6 +413,7 @@ export interface MechanicContext {
   /** Resolved config value (instance override -> world setting -> default). */
   config<T = unknown>(key: string): T;
   state: StateAccessor;
+  records: RecordAccessor;
   /** Deterministic formula evaluation with mechanic variables + actor roll data. */
   evalFormula(formula: NumberOrFormula): number;
   /** Roll dice (chat-visible) and return the total. */
@@ -352,6 +457,8 @@ export interface PluginRuntimeHooks {
   onTransformExpire?(ctx: MechanicContext, transform: TransformDef): void | Promise<void>;
   onAdjudicated?(ctx: MechanicContext, adjudication: AdjudicationDef, resultId: string): void | Promise<void>;
   onRecharge?(ctx: MechanicContext, resource: ResourceDef, rule: RechargeRule, applied: number): void | Promise<void>;
+  onRecordAction?(ctx: MechanicContext, collection: RecordCollectionDef, record: MechanicRecord, action: RecordActionDef): void | Promise<void>;
+  migrateRecord?(collectionId: string, record: MechanicRecord, fromVersion: number, toVersion: number): MechanicRecord;
 }
 
 export interface MechanicPlugin {
@@ -374,6 +481,7 @@ export interface MechanicPlugin {
   transformations?: TransformDef[];
   tables?: ConsequenceTableDef[];
   adjudications?: AdjudicationDef[];
+  recordCollections?: RecordCollectionDef[];
   configSchema?: ConfigFieldDef[];
   hooks?: PluginRuntimeHooks;
 }

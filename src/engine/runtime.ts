@@ -37,6 +37,7 @@ import {
 } from "./state";
 import type { Bounds } from "./trackers";
 import { applyDelta, thresholdsCrossed } from "./trackers";
+import { makeRecordAccessor } from "./records";
 
 /** Cooldown sentinels stored in state.cooldowns. */
 const CD_READY = -1;
@@ -194,7 +195,8 @@ export function makeContext(att: Attachment): MechanicContext | null {
   if (!plugin) return null;
   const state = () => readState(att.stateDoc, att.pluginId);
 
-  const ctx: MechanicContext = {
+  let ctx!: MechanicContext;
+  ctx = {
     actor: att.actor,
     item: att.item,
     pluginId: att.pluginId,
@@ -232,6 +234,7 @@ export function makeContext(att: Attachment): MechanicContext | null {
         return t ? { id: t.id, roundsLeft: t.roundsLeft } : null;
       },
     },
+    records: makeRecordAccessor(att, plugin, () => ctx),
     evalFormula: (formula) => {
       const s = state();
       if (!s) return 0;

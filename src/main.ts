@@ -4,7 +4,10 @@
 import { createApi } from "./api";
 import { MODULE_ID } from "./constants";
 import { watchItemTransfers } from "./engine/attach";
-import { fireRegistrationHook, listPlugins, registerPlugin } from "./engine/registry";
+import { fireRegistrationHook, getPlugin, listPlugins, registerPlugin } from "./engine/registry";
+import { ensureAttachmentReady } from "./engine/records";
+import { makeContext } from "./engine/runtime";
+import { isTransformedActor, resolveAttachments } from "./engine/state";
 import { registerCoreSettings } from "./engine/settings";
 import { initSockets, registerGmConfirmResponder } from "./engine/sockets";
 import { initTriggerBus } from "./engine/trigger-bus";
@@ -37,12 +40,20 @@ Hooks.once("setup", () => {
   fireRegistrationHook(api);
 });
 
-Hooks.once("ready", () => {
+Hooks.once("ready", async () => {
   initSockets();
   registerGmConfirmResponder();
   initTriggerBus();
   watchItemTransfers();
   registerChatCardListeners();
   registerSheetPanel();
+  for (const actor of game.actors ?? []) {
+    if (isTransformedActor(actor)) continue;
+    for (const att of resolveAttachments(actor)) {
+      const plugin = getPlugin(att.pluginId);
+      const ctx = plugin ? makeContext(att) : null;
+      if (plugin && ctx) await ensureAttachmentReady(att, plugin, () => ctx);
+    }
+  }
   console.log(`hero-engine | ready — ${listPlugins().length} mechanics registered`);
 });

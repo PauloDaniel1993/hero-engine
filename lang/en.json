@@ -132,6 +132,15 @@
       "AdjustHint": "Click to adjust (enter e.g. \"-2 spent on ritual\")",
       "AdjustTitle": "Adjust value",
       "AdjustLabel": "Delta and reason for {id} (e.g. \"-2 spent on ritual\"):"
+    },
+    "Records": {
+      "Search": "Search records…",
+      "All": "All",
+      "Permanent": "Permanent",
+      "Temporary": "Temporary",
+      "Blocked": "Blocked",
+      "Empty": "Empty slot",
+      "Overflow": "Overflow"
     }
   }
 }

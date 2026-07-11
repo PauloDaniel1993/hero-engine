@@ -132,6 +132,15 @@
       "AdjustHint": "Clique para ajustar (digite ex.: \"-2 gasto no ritual\")",
       "AdjustTitle": "Ajustar valor",
       "AdjustLabel": "Delta e motivo para {id} (ex.: \"-2 gasto no ritual\"):"
+    },
+    "Records": {
+      "Search": "Buscar registros…",
+      "All": "Todos",
+      "Permanent": "Permanente",
+      "Temporary": "Temporário",
+      "Blocked": "Bloqueado",
+      "Empty": "Espaço vazio",
+      "Overflow": "Excedente"
     }
   }
 }

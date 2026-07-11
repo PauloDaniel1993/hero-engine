@@ -74,6 +74,7 @@ export function validatePlugin(plugin: MechanicPlugin): ValidationIssue[] {
   uniqueIn("transformations", plugin.transformations, false);
   uniqueIn("tables", plugin.tables, false);
   uniqueIn("adjudications", plugin.adjudications, false);
+  uniqueIn("recordCollections", plugin.recordCollections, false);
 
   const promptIds = new Set((plugin.prompts ?? []).map((p) => p.id));
   const transformIds = new Set((plugin.transformations ?? []).map((t) => t.id));
@@ -220,6 +221,33 @@ export function validatePlugin(plugin: MechanicPlugin): ValidationIssue[] {
     (a.choices ?? []).forEach((c, j) => checkOps(`${p}.choices[${j}].apply`, c.apply));
     checkOps(`${p}.onConfirm`, a.onConfirm);
     checkOps(`${p}.onDeny`, a.onDeny);
+  });
+
+  (plugin.recordCollections ?? []).forEach((collection, i) => {
+    const p = `recordCollections[${i}]`;
+    if (!Number.isInteger(collection.schemaVersion) || collection.schemaVersion < 1) err(`${p}.schemaVersion`, "must be a positive integer");
+    checkFormula(`${p}.capacity`, collection.capacity);
+    if (!collection.labelKey) err(`${p}.labelKey`, "is required");
+    if (!["public", "owner", "gm", undefined].includes(collection.visibility)) err(`${p}.visibility`, "is invalid");
+    const fieldKeys = new Set<string>();
+    collection.fields.forEach((field, j) => {
+      const fp = `${p}.fields[${j}]`;
+      if (!field.key || !/^[a-z][a-zA-Z0-9]*$/.test(field.key)) err(`${fp}.key`, `invalid field key "${field.key}"`);
+      if (fieldKeys.has(field.key)) err(`${fp}.key`, `duplicate field key "${field.key}"`);
+      fieldKeys.add(field.key);
+      if (field.type === "choice" && !field.choices?.length) err(`${fp}.choices`, "required for choice field");
+    });
+    const actionIds = new Set<string>();
+    (collection.actions ?? []).forEach((action, j) => {
+      const ap = `${p}.actions[${j}]`;
+      if (!ID_RE.test(action.id)) err(`${ap}.id`, `invalid id "${action.id}"`);
+      if (actionIds.has(action.id)) err(`${ap}.id`, `duplicate action id "${action.id}"`);
+      actionIds.add(action.id);
+    });
+    if (collection.lifecycle?.type !== "permanent" && collection.lifecycle?.type !== "manual") {
+      checkFormula(`${p}.lifecycle.duration`, collection.lifecycle?.duration);
+      if (collection.lifecycle && collection.lifecycle.duration === undefined) err(`${p}.lifecycle.duration`, "is required");
+    }
   });
 
   validateConfigSchema(plugin.configSchema ?? [], vars, err);

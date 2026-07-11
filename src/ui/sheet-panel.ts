@@ -169,6 +169,35 @@ function renderMechanic(att: Attachment, plugin: MechanicPlugin, state: Instance
     );
   }
 
+  for (const collection of plugin.recordCollections ?? []) {
+    const ctx = makeContext(att);
+    if (!ctx) continue;
+    const snapshot = ctx.records.list(collection.id);
+    const presentationKey = `hero-engine:collection-ui:${att.canonicalActor.id}:${plugin.id}:${collection.id}`;
+    let presentation: { search?: string; filter?: string } = {};
+    try { presentation = JSON.parse(localStorage.getItem(presentationKey) ?? "{}"); } catch { /* ignore stale client data */ }
+    const allSlots = [...snapshot.slots, ...snapshot.overflow];
+    const rows = allSlots.map((slot, index) => {
+      const overflow = index >= snapshot.slots.length;
+      const status = slot.blocked ? "blocked" : slot.record ? (slot.record.temporary ? "temporary" : "permanent") : "empty";
+      const title = slot.record ? String(slot.record.data["name"] ?? slot.record.data["label"] ?? slot.record.id) : localize("HEROENGINE.Records.Empty");
+      const details = slot.record ? Object.entries(slot.record.data).filter(([key]) => key !== "name" && key !== "label").map(([key, value]) => `<span><b>${escapeHtml(key)}</b>${escapeHtml(typeof value === "string" ? value : JSON.stringify(value))}</span>`).join("") : "";
+      const actions = slot.record ? (collection.actions ?? []).filter((action) => !action.gmOnly || game.user.isGM).map((action) => `<button type="button" data-he="record-action" data-plugin="${plugin.id}" data-collection="${collection.id}" data-record="${slot.record!.id}" data-action="${action.id}">${escapeHtml(localize(action.labelKey))}</button>`).join("") : "";
+      return `<article class="he-record-slot is-${status}${overflow ? " is-overflow" : ""}" data-he-record data-status="${status}" data-search="${escapeHtml(`${title} ${JSON.stringify(slot.record?.data ?? {})}`.toLocaleLowerCase())}">
+        <header><span class="he-record-index">${index + 1}</span><strong>${escapeHtml(title)}</strong>
+          <span class="he-record-badges">${overflow ? `<i>${localize("HEROENGINE.Records.Overflow")}</i>` : ""}<i>${localize(`HEROENGINE.Records.${status[0]!.toUpperCase()}${status.slice(1)}`)}</i></span></header>
+        ${slot.blocked ? `<p>${escapeHtml(slot.blocked.reason)}</p>` : ""}${details ? `<div class="he-record-details">${details}</div>` : ""}
+        ${actions ? `<footer>${actions}</footer>` : ""}</article>`;
+    }).join("");
+    parts.push(`<section class="he-record-collection" data-he-collection="${collection.id}" data-presentation-key="${escapeHtml(presentationKey)}">
+      <header class="he-record-heading"><div><i class="fa-solid fa-layer-group"></i><span><strong>${escapeHtml(localize(collection.labelKey))}</strong>
+        <small>${collection.descriptionKey ? escapeHtml(localize(collection.descriptionKey)) : ""}</small></span></div><b>${snapshot.slots.filter((slot) => slot.record).length}/${snapshot.capacity}</b></header>
+      <div class="he-record-tools"><label><i class="fa-solid fa-magnifying-glass"></i><input type="search" data-he-record-search value="${escapeHtml(presentation.search ?? "")}" placeholder="${escapeHtml(localize("HEROENGINE.Records.Search"))}" /></label>
+        <select data-he-record-filter><option value="all" ${!presentation.filter || presentation.filter === "all" ? "selected" : ""}>${localize("HEROENGINE.Records.All")}</option><option value="permanent" ${presentation.filter === "permanent" ? "selected" : ""}>${localize("HEROENGINE.Records.Permanent")}</option><option value="temporary" ${presentation.filter === "temporary" ? "selected" : ""}>${localize("HEROENGINE.Records.Temporary")}</option><option value="blocked" ${presentation.filter === "blocked" ? "selected" : ""}>${localize("HEROENGINE.Records.Blocked")}</option><option value="empty" ${presentation.filter === "empty" ? "selected" : ""}>${localize("HEROENGINE.Records.Empty")}</option></select></div>
+      ${snapshot.recovery ? `<p class="he-record-recovery"><i class="fa-solid fa-triangle-exclamation"></i>${escapeHtml(snapshot.recovery)}</p>` : ""}
+      <div class="he-record-list">${rows}</div></section>`);
+  }
+
   // Active transformation countdown.
   if (state.transform) {
     const def = plugin.transformations?.find((t) => t.id === state.transform!.id);
@@ -237,6 +266,31 @@ function bindPanel(root: HTMLElement, actor: any): void {
   if (!panel || panel.dataset["heBound"]) return;
   panel.dataset["heBound"] = "1";
 
+  const applyCollectionFilter = (collection: HTMLElement) => {
+    const query = collection.querySelector<HTMLInputElement>("[data-he-record-search]")?.value.trim().toLocaleLowerCase() ?? "";
+    const filter = collection.querySelector<HTMLSelectElement>("[data-he-record-filter]")?.value ?? "all";
+    collection.querySelectorAll<HTMLElement>("[data-he-record]").forEach((row) => {
+      const statusMatches = filter === "all" || row.dataset["status"] === filter;
+      const queryMatches = !query || (row.dataset["search"] ?? "").includes(query);
+      row.hidden = !(statusMatches && queryMatches);
+    });
+    const key = collection.dataset["presentationKey"];
+    if (key) localStorage.setItem(key, JSON.stringify({ search: query, filter }));
+  };
+  panel.querySelectorAll<HTMLElement>("[data-he-collection]").forEach((collection) => {
+    const stored = collection.dataset["presentationKey"] ? localStorage.getItem(collection.dataset["presentationKey"]!) : null;
+    if (stored) {
+      try {
+        const data = JSON.parse(stored);
+        const filter = collection.querySelector<HTMLSelectElement>("[data-he-record-filter]");
+        if (filter) filter.value = data.filter ?? "all";
+      } catch { /* ignore stale client data */ }
+    }
+    collection.addEventListener("input", () => applyCollectionFilter(collection));
+    collection.addEventListener("change", () => applyCollectionFilter(collection));
+    applyCollectionFilter(collection);
+  });
+
   panel.addEventListener("click", async (event) => {
     const button = (event.target as HTMLElement).closest<HTMLElement>("[data-he]");
     if (!button || button.dataset["he"] === "stance") return;
@@ -248,6 +302,9 @@ function bindPanel(root: HTMLElement, actor: any): void {
     try {
       if (kind === "action") {
         await executeAction(att, id);
+      } else if (kind === "record-action") {
+        const ctx = makeContext(att);
+        await ctx?.records.runAction(button.dataset["collection"]!, button.dataset["record"]!, button.dataset["action"]!);
       } else if (kind === "trigger") {
         const ctx = makeContext(att);
         await ctx?.fireTrigger(id, { event: "manual" });
