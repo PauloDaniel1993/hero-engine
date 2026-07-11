@@ -909,7 +909,7 @@ const hooks = {
 };
 
 export const thargunnMythic: MechanicPlugin = {
-  id: "thargunn-mythic", version: "1.0.3", archetype: "character",
+  id: "thargunn-mythic", version: "1.0.4", archetype: "character",
   nameKey: `${P}.Name`, descriptionKey: `${P}.Description`,
   trackers: [
     { id: "weaponLevel", labelKey: `${P}.Trackers.WeaponLevel`, min: 1, max: 5, initial: 1 },

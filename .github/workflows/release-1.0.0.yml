@@ -1,4 +1,4 @@
-name: Publish Hero Engine 1.0.7
+name: Publish Hero Engine 1.0.8
 
 on:
   push:
@@ -30,8 +30,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh release view v1.0.7 >/dev/null 2>&1; then
-            gh release upload v1.0.7 dist/module.json#module.json hero-engine.zip#hero-engine.zip --clobber
+          if gh release view v1.0.8 >/dev/null 2>&1; then
+            gh release upload v1.0.8 dist/module.json#module.json hero-engine.zip#hero-engine.zip --clobber
           else
-            gh release create v1.0.7 --target "$GITHUB_SHA" --title "Hero Engine 1.0.7 — Ultimate Rage and Reach" --notes-file CHANGELOG.md dist/module.json#module.json hero-engine.zip#hero-engine.zip
+            gh release create v1.0.8 --target "$GITHUB_SHA" --title "Hero Engine 1.0.8 — Action Help Cards" --notes-file CHANGELOG.md dist/module.json#module.json hero-engine.zip#hero-engine.zip
           fi

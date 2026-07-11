@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.8 — 2026-07-11
+
+- Add rich action help cards after a 500 ms hover or keyboard focus, with the
+  action description, evaluated resource costs, readiness, and every active
+  blocker.
+- Keep disabled actions hoverable and explain Thar’gunn-specific requirements,
+  including Ultimate state, pending GM approval, the Field, Skeldr, cooldowns,
+  ownership, and insufficient Legendary Points.
+- Document the add-on contract for action descriptions and exact localized
+  availability reasons.
+
 ## 1.0.7 — 2026-07-11
 
 - Carry Rage into the Ultimate actor swap through a managed form effect,
