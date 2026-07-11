@@ -322,7 +322,12 @@ html[data-hero-engine-theme="storm"] #scene-controls [data-tool="hero-engine-gm"
   --he-muted: rgba(255, 255, 255, 0.58);
   color: var(--he-text);
   margin: -1rem;
-  min-height: 420px;
+  max-height: calc(100vh - 5rem);
+  min-height: min(420px, calc(100vh - 5rem));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: rgba(217, 164, 65, 0.7) rgba(255, 255, 255, 0.035);
+  scrollbar-width: thin;
   background:
     radial-gradient(circle at 88% -10%, rgba(217, 164, 65, 0.18), transparent 36%),
     linear-gradient(145deg, #12141b, #0c0e14 72%);
@@ -343,9 +348,13 @@ html[data-hero-engine-theme="storm"] #scene-controls [data-tool="hero-engine-gm"
   font: inherit;
 }
 .hero-engine-gm .he-hero {
+  position: sticky;
+  z-index: 5;
+  top: 0;
   padding: 1.2rem 1.35rem 1rem;
   border-bottom: 1px solid var(--he-border);
-  background: linear-gradient(90deg, rgba(217, 164, 65, 0.08), transparent 55%);
+  background: linear-gradient(90deg, rgba(217, 164, 65, 0.12), transparent 55%), #12141b;
+  box-shadow: 0 0.7rem 1.2rem rgba(0, 0, 0, 0.2);
 }
 .hero-engine-gm .he-brand,
 .hero-engine-gm .he-stats,
