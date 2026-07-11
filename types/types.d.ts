@@ -301,6 +301,8 @@ export interface TransformExpireDef {
     table?: string;
     chatKey?: string;
     runHook?: boolean;
+    /** Also settle the expiry outcome when the form is ended manually. */
+    onManual?: boolean;
 }
 /** A timed full-body form (Ultimates, Avatar states). */
 export interface TransformDef {
@@ -461,6 +463,7 @@ export interface PluginRuntimeHooks {
     onAdjudicated?(ctx: MechanicContext, adjudication: AdjudicationDef, resultId: string): void | Promise<void>;
     onRecharge?(ctx: MechanicContext, resource: ResourceDef, rule: RechargeRule, applied: number): void | Promise<void>;
     onRecordAction?(ctx: MechanicContext, collection: RecordCollectionDef, record: MechanicRecord, action: RecordActionDef): void | Promise<void>;
+    onRecordReplacement?(ctx: MechanicContext, collection: RecordCollectionDef, pending: MechanicRecord, erased: MechanicRecord): void | Promise<void>;
     migrateRecord?(collectionId: string, record: MechanicRecord, fromVersion: number, toVersion: number): MechanicRecord;
     onSecureTargetRequest?(ctx: MechanicContext, request: SecureTargetRequest, target: ActorDoc, trustedUserId: string): void | Promise<void>;
 }
